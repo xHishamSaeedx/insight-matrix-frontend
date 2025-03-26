@@ -3,6 +3,9 @@ import Navbar from "./components/Navbar";
 import Home from "./components/Home";
 import RegisterCompany from "./pages/RegisterCompany";
 import Login from "./pages/Login";
+import Dashboard from "./pages/Dashboard";
+import AddUser from "./pages/AddUser";
+import ViewUsers from "./pages/ViewUsers";
 import "./App.css";
 
 function App() {
@@ -15,6 +18,9 @@ function App() {
             <Route path="/" element={<Home />} />
             <Route path="/register" element={<RegisterCompany />} />
             <Route path="/login" element={<Login />} />
+            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/add-user" element={<AddUser />} />
+            <Route path="/view-users" element={<ViewUsers />} />
           </Routes>
         </main>
       </div>

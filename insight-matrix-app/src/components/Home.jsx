@@ -26,6 +26,7 @@ import {
 } from "react-icons/md";
 import * as random from "maath/random/dist/maath-random.esm";
 import Navbar from "./Navbar";
+import { Link } from "react-router-dom";
 
 const StarBackground = (props) => {
   const ref = useRef();
@@ -218,13 +219,33 @@ const Home = () => {
               Automate meeting analysis, track key discussions, and make
               data-driven decisions.
             </p>
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              className="bg-gradient-to-r from-violet-500 to-indigo-600 text-white px-10 py-4 rounded-full font-semibold hover:shadow-lg transition duration-300 text-lg"
-            >
-              Get Started
-            </motion.button>
+            <div className="flex justify-center gap-4">
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                className="bg-gradient-to-r from-violet-500 to-indigo-600 text-white px-10 py-4 rounded-full font-semibold hover:shadow-lg transition duration-300 text-lg"
+              >
+                Get Started
+              </motion.button>
+              <Link to="/register">
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  className="bg-white text-indigo-600 px-10 py-4 rounded-full font-semibold hover:shadow-lg transition duration-300 text-lg"
+                >
+                  Register Company
+                </motion.button>
+              </Link>
+              <Link to="/login">
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  className="border-2 border-white text-white px-10 py-4 rounded-full font-semibold hover:shadow-lg transition duration-300 text-lg"
+                >
+                  Login
+                </motion.button>
+              </Link>
+            </div>
           </motion.div>
         </section>
 
