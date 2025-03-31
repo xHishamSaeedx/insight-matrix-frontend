@@ -6,6 +6,7 @@ import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import AddUser from "./pages/AddUser";
 import ViewUsers from "./pages/ViewUsers";
+import Analyze from "./pages/Analyze";
 import "./App.css";
 
 function App() {
@@ -21,6 +22,7 @@ function App() {
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/add-user" element={<AddUser />} />
             <Route path="/view-users" element={<ViewUsers />} />
+            <Route path="/analyze" element={<Analyze />} />
           </Routes>
         </main>
       </div>
