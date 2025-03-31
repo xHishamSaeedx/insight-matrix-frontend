@@ -2,11 +2,26 @@ import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { supabase } from "../lib/supabase";
 import { FaChartBar, FaSpinner, FaPlay, FaFolder } from "react-icons/fa";
-import { Chart as ChartJS, ArcElement, Tooltip, Legend } from "chart.js";
-import { Pie } from "react-chartjs-2";
+import {
+  Chart as ChartJS,
+  ArcElement,
+  Tooltip,
+  Legend,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+} from "chart.js";
+import { Pie, Bar } from "react-chartjs-2";
 
 // Register ChartJS components
-ChartJS.register(ArcElement, Tooltip, Legend);
+ChartJS.register(
+  ArcElement,
+  Tooltip,
+  Legend,
+  CategoryScale,
+  LinearScale,
+  BarElement
+);
 
 const Analyze = () => {
   const [meetings, setMeetings] = useState([]);
@@ -22,11 +37,17 @@ const Analyze = () => {
   const [allThemes, setAllThemes] = useState([]);
   const [filteredInsights, setFilteredInsights] = useState([]);
   const [selectedFilterTheme, setSelectedFilterTheme] = useState("");
+  const [insightDistribution, setInsightDistribution] = useState({});
+  const [loadingInsightDistribution, setLoadingInsightDistribution] =
+    useState(false);
+  const [selectedDistributionTheme, setSelectedDistributionTheme] =
+    useState("all");
 
   useEffect(() => {
     fetchUserWorkspace();
     fetchThemeDistribution();
     fetchAllThemes();
+    fetchInsightDistribution();
   }, []);
 
   const fetchUserWorkspace = async () => {
@@ -279,6 +300,76 @@ const Analyze = () => {
     }
   };
 
+  // Add this helper function to calculate sentiment score
+  const calculateSentimentScore = (sentiments) => {
+    const total =
+      sentiments.POSITIVE + sentiments.NEGATIVE + sentiments.NEUTRAL;
+    if (total === 0) return 0;
+
+    // Weight: Positive = 1, Neutral = 0, Negative = -1
+    const score = (sentiments.POSITIVE - sentiments.NEGATIVE) / total;
+    return score;
+  };
+
+  // Update the fetchInsightDistribution function
+  const fetchInsightDistribution = async () => {
+    try {
+      setLoadingInsightDistribution(true);
+
+      const { data: insightsData, error: insightsError } = await supabase
+        .from("feedback_insights")
+        .select("feedback_insights_id, theme, insight")
+        .eq("source", "meeting");
+
+      if (insightsError) throw insightsError;
+
+      const distributionData = {};
+
+      for (const insight of insightsData) {
+        const { data: feedbackData, error: countError } = await supabase
+          .from("feedback")
+          .select("sentiment")
+          .eq("feedback_insight_id", insight.feedback_insights_id);
+
+        if (countError) throw countError;
+
+        const sentimentCounts = {
+          POSITIVE: 0,
+          NEGATIVE: 0,
+          NEUTRAL: 0,
+        };
+
+        feedbackData.forEach((item) => {
+          sentimentCounts[item.sentiment] =
+            (sentimentCounts[item.sentiment] || 0) + 1;
+        });
+
+        // Calculate overall sentiment score
+        const sentimentScore = calculateSentimentScore(sentimentCounts);
+
+        distributionData[insight.insight] = {
+          count: feedbackData.length,
+          theme: insight.theme,
+          sentiments: sentimentCounts,
+          sentimentScore: sentimentScore,
+          // Add sentiment classification based on score
+          overallSentiment:
+            sentimentScore > 0.3
+              ? "Mostly Positive"
+              : sentimentScore < -0.3
+              ? "Mostly Negative"
+              : "Mixed/Neutral",
+        };
+      }
+
+      setInsightDistribution(distributionData);
+    } catch (error) {
+      console.error("Error fetching insight distribution:", error);
+    } finally {
+      setLoadingInsightDistribution(false);
+    }
+  };
+
   useEffect(() => {
     if (selectedMeeting && clips.length > 0) {
       clips.forEach((clip) => {
@@ -434,6 +525,163 @@ const Analyze = () => {
         )}
       </div>
     );
+  };
+
+  // Add new function to generate short labels
+  const generateShortLabel = (text, index) => {
+    return `Insight ${index + 1}`;
+  };
+
+  // Update the insightChartData to include sentiment data
+  const insightChartData = {
+    originalLabels: Object.keys(insightDistribution).filter(
+      (key) =>
+        selectedDistributionTheme === "all" ||
+        insightDistribution[key].theme === selectedDistributionTheme
+    ),
+    labels: Object.keys(insightDistribution)
+      .filter(
+        (key) =>
+          selectedDistributionTheme === "all" ||
+          insightDistribution[key].theme === selectedDistributionTheme
+      )
+      .map((_, index) => generateShortLabel(_, index)),
+    datasets: [
+      {
+        label: "Positive",
+        data: Object.keys(insightDistribution)
+          .filter(
+            (key) =>
+              selectedDistributionTheme === "all" ||
+              insightDistribution[key].theme === selectedDistributionTheme
+          )
+          .map((key) => insightDistribution[key].sentiments.POSITIVE),
+        backgroundColor: "rgba(34, 197, 94, 0.6)",
+        borderColor: "rgba(255, 255, 255, 0.8)",
+        borderWidth: 1,
+        borderRadius: 4,
+      },
+      {
+        label: "Neutral",
+        data: Object.keys(insightDistribution)
+          .filter(
+            (key) =>
+              selectedDistributionTheme === "all" ||
+              insightDistribution[key].theme === selectedDistributionTheme
+          )
+          .map((key) => insightDistribution[key].sentiments.NEUTRAL),
+        backgroundColor: "rgba(234, 179, 8, 0.6)",
+        borderColor: "rgba(255, 255, 255, 0.8)",
+        borderWidth: 1,
+        borderRadius: 4,
+      },
+      {
+        label: "Negative",
+        data: Object.keys(insightDistribution)
+          .filter(
+            (key) =>
+              selectedDistributionTheme === "all" ||
+              insightDistribution[key].theme === selectedDistributionTheme
+          )
+          .map((key) => insightDistribution[key].sentiments.NEGATIVE),
+        backgroundColor: "rgba(239, 68, 68, 0.6)",
+        borderColor: "rgba(255, 255, 255, 0.8)",
+        borderWidth: 1,
+        borderRadius: 4,
+      },
+    ],
+  };
+
+  // Update the chart options to show stacked bars and better tooltips
+  const insightChartOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    scales: {
+      y: {
+        beginAtZero: true,
+        stacked: true,
+        ticks: {
+          stepSize: 1,
+          font: {
+            size: 11,
+          },
+        },
+        grid: {
+          drawBorder: false,
+          color: "rgba(0, 0, 0, 0.05)",
+        },
+      },
+      x: {
+        stacked: true,
+        ticks: {
+          maxRotation: 0,
+          minRotation: 0,
+          autoSkip: true,
+          maxTicksLimit: 20,
+          font: {
+            size: 12,
+          },
+        },
+        grid: {
+          display: false,
+        },
+      },
+    },
+    plugins: {
+      tooltip: {
+        backgroundColor: "rgba(255, 255, 255, 0.9)",
+        titleColor: "#333",
+        titleFont: {
+          size: 12,
+          weight: "bold",
+        },
+        bodyColor: "#666",
+        bodyFont: {
+          size: 11,
+        },
+        borderColor: "rgba(0, 0, 0, 0.1)",
+        borderWidth: 1,
+        padding: 10,
+        displayColors: true,
+        callbacks: {
+          title: (context) => {
+            const index = context[0].dataIndex;
+            return insightChartData.originalLabels[index];
+          },
+          label: (context) => {
+            const insight = insightChartData.originalLabels[context.dataIndex];
+            const dataset = context.dataset.label;
+            const value = context.raw;
+            const total = insightDistribution[insight].count;
+            const percentage = ((value / total) * 100).toFixed(1);
+            return `${dataset}: ${value} (${percentage}%)`;
+          },
+          footer: (context) => {
+            const insight =
+              insightChartData.originalLabels[context[0].dataIndex];
+            return `Total mentions: ${insightDistribution[insight].count}`;
+          },
+        },
+      },
+      legend: {
+        display: true,
+        position: "top",
+        labels: {
+          font: {
+            size: 12,
+          },
+          usePointStyle: true,
+          padding: 20,
+        },
+      },
+    },
+    animation: {
+      duration: 500,
+    },
+    barThickness: "flex",
+    maxBarThickness: 30,
+    barPercentage: 0.8,
+    categoryPercentage: 0.9,
   };
 
   return (
@@ -600,6 +848,94 @@ const Analyze = () => {
                 </div>
               )}
             </div>
+          </div>
+        </motion.div>
+
+        {/* Add this after the Analytics Dashboard section */}
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="bg-white rounded-lg shadow p-6 mb-8"
+        >
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h2 className="text-xl font-semibold">Insights Distribution</h2>
+              <p className="text-gray-600 mt-1">
+                Frequency of each insight mentioned in customer feedback
+              </p>
+            </div>
+            <div className="flex items-center gap-4">
+              <select
+                value={selectedDistributionTheme}
+                onChange={(e) => setSelectedDistributionTheme(e.target.value)}
+                className="block rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+              >
+                <option value="all">All Themes</option>
+                {allThemes.map((theme) => (
+                  <option key={theme} value={theme}>
+                    {theme}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className="h-full">
+            <div className="h-[300px]">
+              <Bar data={insightChartData} options={insightChartOptions} />
+            </div>
+
+            <div className="mt-6 border-t border-gray-100 pt-4">
+              <h3 className="text-sm font-medium text-gray-700 mb-3">
+                Insight Reference
+              </h3>
+              <div className="space-y-2 max-h-[300px] overflow-y-auto pr-4">
+                {insightChartData.originalLabels.map((label, index) => (
+                  <div
+                    key={index}
+                    className="flex items-start space-x-3 text-sm py-2 border-b border-gray-50 last:border-b-0"
+                  >
+                    <span className="font-medium text-gray-700 whitespace-nowrap min-w-[80px]">
+                      {generateShortLabel(label, index)}:
+                    </span>
+                    <div className="flex-1">
+                      <span className="text-gray-600">{label}</span>
+                      <div className="mt-1 flex items-center gap-2">
+                        <span
+                          className={`text-xs px-2 py-1 rounded-full ${
+                            insightDistribution[label].overallSentiment ===
+                            "Mostly Positive"
+                              ? "bg-green-100 text-green-800"
+                              : insightDistribution[label].overallSentiment ===
+                                "Mostly Negative"
+                              ? "bg-red-100 text-red-800"
+                              : "bg-yellow-100 text-yellow-800"
+                          }`}
+                        >
+                          {insightDistribution[label].overallSentiment}
+                        </span>
+                        <span className="text-xs text-gray-500">
+                          Score:{" "}
+                          {insightDistribution[label].sentimentScore.toFixed(2)}
+                        </span>
+                        <span className="text-xs text-gray-500">
+                          ({insightDistribution[label].sentiments.POSITIVE} 👍
+                          {insightDistribution[label].sentiments.NEUTRAL} 😐
+                          {insightDistribution[label].sentiments.NEGATIVE} 👎)
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {selectedDistributionTheme !== "all" && (
+              <div className="mt-4 text-center text-sm text-gray-600">
+                Showing insights for theme: {selectedDistributionTheme}
+              </div>
+            )}
           </div>
         </motion.div>
 
