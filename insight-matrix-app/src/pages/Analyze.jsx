@@ -212,6 +212,40 @@ const Analyze = () => {
       </div>
 
       <div className="container mx-auto px-6 py-8">
+        {/* Analytics Dashboard Section */}
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-white rounded-lg shadow p-6 mb-8"
+        >
+          <h2 className="text-xl font-semibold mb-6">Analytics Dashboard</h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* Placeholder for analytics components */}
+            <div className="bg-indigo-50 p-6 rounded-lg">
+              <h3 className="font-medium text-indigo-800 mb-2">
+                Total Meetings
+              </h3>
+              <p className="text-3xl font-bold text-indigo-600">
+                {meetings.length}
+              </p>
+            </div>
+            <div className="bg-green-50 p-6 rounded-lg">
+              <h3 className="font-medium text-green-800 mb-2">Total Clips</h3>
+              <p className="text-3xl font-bold text-green-600">
+                {clips.length}
+              </p>
+            </div>
+            <div className="bg-purple-50 p-6 rounded-lg">
+              <h3 className="font-medium text-purple-800 mb-2">
+                Insights Generated
+              </h3>
+              <p className="text-3xl font-bold text-purple-600">
+                {Object.keys(clipFeedback).length}
+              </p>
+            </div>
+          </div>
+        </motion.div>
+
         {loading ? (
           <div className="flex justify-center items-center">
             <FaSpinner className="animate-spin text-3xl text-indigo-600" />
