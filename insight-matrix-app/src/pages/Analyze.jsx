@@ -10,6 +10,7 @@ const Analyze = () => {
   const [selectedMeeting, setSelectedMeeting] = useState(null);
   const [workspaceId, setWorkspaceId] = useState(null);
   const [clipUrls, setClipUrls] = useState({});
+  const [clipFeedback, setClipFeedback] = useState({});
 
   useEffect(() => {
     fetchUserWorkspace();
@@ -135,10 +136,67 @@ const Analyze = () => {
     }
   };
 
+  const fetchFeedbackForClip = async (meetingTitle, clipName) => {
+    try {
+      const clipPath = `${workspaceId}/${meetingTitle}/${clipName}`;
+
+      // First get the feedback entry - remove single() and handle multiple results
+      const { data: feedbackData, error: feedbackError } = await supabase
+        .from("feedback")
+        .select("feedback_insight_id, sentiment")
+        .eq("clip_path", clipPath);
+
+      if (feedbackError) throw feedbackError;
+
+      // Handle no results
+      if (!feedbackData || feedbackData.length === 0) {
+        console.log("No feedback found for clip:", clipPath);
+        return;
+      }
+
+      // Take the first feedback entry if multiple exist
+      const feedback = feedbackData[0];
+
+      // Then get the feedback insights
+      const { data: insightData, error: insightError } = await supabase
+        .from("feedback_insights")
+        .select("theme, insight, product_area, feedback")
+        .eq("feedback_insights_id", feedback.feedback_insight_id)
+        .single();
+
+      if (insightError) throw insightError;
+
+      if (!insightData) {
+        console.log(
+          "No insights found for feedback_insight_id:",
+          feedback.feedback_insight_id
+        );
+        return;
+      }
+
+      // Combine the data
+      setClipFeedback((prev) => ({
+        ...prev,
+        [clipName]: {
+          ...insightData,
+          sentiment: feedback.sentiment,
+        },
+      }));
+    } catch (error) {
+      // More detailed error logging
+      console.error("Error fetching feedback:", {
+        error,
+        clipPath: `${workspaceId}/${meetingTitle}/${clipName}`,
+        details: error.message || "No error message available",
+      });
+    }
+  };
+
   useEffect(() => {
     if (selectedMeeting && clips.length > 0) {
       clips.forEach((clip) => {
         getClipUrl(selectedMeeting, clip.name);
+        fetchFeedbackForClip(selectedMeeting, clip.name);
       });
     }
   }, [clips, selectedMeeting]);
@@ -217,7 +275,7 @@ const Analyze = () => {
                         animate={{ opacity: 1, y: 0 }}
                         className="bg-gray-50 rounded-lg p-4"
                       >
-                        <div className="space-y-3">
+                        <div className="space-y-4">
                           <div>
                             <h3 className="font-medium text-gray-800">
                               {clip.name}
@@ -227,6 +285,7 @@ const Analyze = () => {
                               MB
                             </p>
                           </div>
+
                           {clipUrls[clip.name] && (
                             <div className="w-full">
                               {clip.metadata?.mimetype?.startsWith("video/") ? (
@@ -250,6 +309,61 @@ const Analyze = () => {
                                   element.
                                 </audio>
                               )}
+                            </div>
+                          )}
+
+                          {clipFeedback[clip.name] && (
+                            <div className="mt-4 space-y-2 bg-white p-4 rounded-lg border border-gray-200">
+                              <div className="flex items-center justify-between">
+                                <span className="font-medium text-gray-700">
+                                  Sentiment:
+                                </span>
+                                <span
+                                  className={`px-3 py-1 rounded-full text-sm ${
+                                    clipFeedback[clip.name].sentiment ===
+                                    "positive"
+                                      ? "bg-green-100 text-green-800"
+                                      : clipFeedback[clip.name].sentiment ===
+                                        "negative"
+                                      ? "bg-red-100 text-red-800"
+                                      : "bg-yellow-100 text-yellow-800"
+                                  }`}
+                                >
+                                  {clipFeedback[clip.name].sentiment}
+                                </span>
+                              </div>
+                              <div>
+                                <span className="font-medium text-gray-700">
+                                  Theme:
+                                </span>
+                                <p className="text-gray-600">
+                                  {clipFeedback[clip.name].theme}
+                                </p>
+                              </div>
+                              <div>
+                                <span className="font-medium text-gray-700">
+                                  Product Area:
+                                </span>
+                                <p className="text-gray-600">
+                                  {clipFeedback[clip.name].product_area}
+                                </p>
+                              </div>
+                              <div>
+                                <span className="font-medium text-gray-700">
+                                  Insight:
+                                </span>
+                                <p className="text-gray-600">
+                                  {clipFeedback[clip.name].insight}
+                                </p>
+                              </div>
+                              <div>
+                                <span className="font-medium text-gray-700">
+                                  Feedback:
+                                </span>
+                                <p className="text-gray-600">
+                                  {clipFeedback[clip.name].feedback}
+                                </p>
+                              </div>
                             </div>
                           )}
                         </div>
