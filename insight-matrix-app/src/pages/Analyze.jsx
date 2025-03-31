@@ -2,6 +2,11 @@ import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { supabase } from "../lib/supabase";
 import { FaChartBar, FaSpinner, FaPlay, FaFolder } from "react-icons/fa";
+import { Chart as ChartJS, ArcElement, Tooltip, Legend } from "chart.js";
+import { Pie } from "react-chartjs-2";
+
+// Register ChartJS components
+ChartJS.register(ArcElement, Tooltip, Legend);
 
 const Analyze = () => {
   const [meetings, setMeetings] = useState([]);
@@ -11,9 +16,17 @@ const Analyze = () => {
   const [workspaceId, setWorkspaceId] = useState(null);
   const [clipUrls, setClipUrls] = useState({});
   const [clipFeedback, setClipFeedback] = useState({});
+  const [themeDistribution, setThemeDistribution] = useState({});
+  const [selectedTheme, setSelectedTheme] = useState(null);
+  const [themeInsights, setThemeInsights] = useState([]);
+  const [allThemes, setAllThemes] = useState([]);
+  const [filteredInsights, setFilteredInsights] = useState([]);
+  const [selectedFilterTheme, setSelectedFilterTheme] = useState("");
 
   useEffect(() => {
     fetchUserWorkspace();
+    fetchThemeDistribution();
+    fetchAllThemes();
   }, []);
 
   const fetchUserWorkspace = async () => {
@@ -192,6 +205,80 @@ const Analyze = () => {
     }
   };
 
+  const fetchThemeDistribution = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("feedback_insights")
+        .select("theme")
+        .eq("source", "meeting");
+
+      if (error) throw error;
+
+      console.log("Raw feedback insights data:", data); // Debug log
+
+      // Count occurrences of each theme
+      const distribution = data.reduce((acc, curr) => {
+        acc[curr.theme] = (acc[curr.theme] || 0) + 1;
+        return acc;
+      }, {});
+
+      console.log("Theme distribution:", distribution); // Debug log
+      setThemeDistribution(distribution);
+    } catch (error) {
+      console.error("Error fetching theme distribution:", error);
+    }
+  };
+
+  const fetchThemeInsights = async (theme) => {
+    try {
+      const { data, error } = await supabase
+        .from("feedback_insights")
+        .select("*")
+        .eq("source", "meeting")
+        .eq("theme", theme);
+
+      if (error) throw error;
+
+      setThemeInsights(data);
+      setSelectedTheme(theme);
+    } catch (error) {
+      console.error("Error fetching theme insights:", error);
+    }
+  };
+
+  const fetchAllThemes = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("feedback_insights")
+        .select("theme")
+        .eq("source", "meeting");
+
+      if (error) throw error;
+
+      // Get unique themes
+      const uniqueThemes = [...new Set(data.map((item) => item.theme))];
+      setAllThemes(uniqueThemes);
+    } catch (error) {
+      console.error("Error fetching themes:", error);
+    }
+  };
+
+  const fetchInsightsByTheme = async (theme) => {
+    try {
+      const { data, error } = await supabase
+        .from("feedback_insights")
+        .select("*")
+        .eq("source", "meeting")
+        .eq("theme", theme);
+
+      if (error) throw error;
+      setFilteredInsights(data);
+      setSelectedFilterTheme(theme);
+    } catch (error) {
+      console.error("Error fetching insights by theme:", error);
+    }
+  };
+
   useEffect(() => {
     if (selectedMeeting && clips.length > 0) {
       clips.forEach((clip) => {
@@ -200,6 +287,154 @@ const Analyze = () => {
       });
     }
   }, [clips, selectedMeeting]);
+
+  // Add this useEffect to monitor themeDistribution changes
+  useEffect(() => {
+    console.log("Updated theme distribution:", themeDistribution);
+    console.log("Chart data:", chartData);
+  }, [themeDistribution]);
+
+  // Add this chart data configuration
+  const chartData = {
+    labels: [
+      "ideas",
+      "problems",
+      "complaints",
+      "appreciations",
+      "questions",
+      "compete mentions",
+      "pricing mentions",
+      "customer support",
+      "customer education",
+      "needs triage",
+    ],
+    datasets: [
+      {
+        data: [
+          themeDistribution["ideas"] || 0,
+          themeDistribution["problems"] || 0,
+          themeDistribution["complaints"] || 0,
+          themeDistribution["appreciations"] || 0,
+          themeDistribution["questions"] || 0,
+          themeDistribution["compete mentions"] || 0,
+          themeDistribution["pricing mentions"] || 0,
+          themeDistribution["customer support"] || 0,
+          themeDistribution["customer education"] || 0,
+          themeDistribution["needs triage"] || 0,
+        ],
+        backgroundColor: [
+          "#FF6384",
+          "#36A2EB",
+          "#FFCE56",
+          "#4BC0C0",
+          "#9966FF",
+          "#FF9F40",
+          "#FF6384",
+          "#36A2EB",
+          "#FFCE56",
+          "#4BC0C0",
+        ],
+        borderColor: "#ffffff",
+        borderWidth: 2,
+      },
+    ],
+  };
+
+  const chartOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    animation: {
+      animateRotate: true,
+      animateScale: true,
+      duration: 2000,
+    },
+    onClick: (event, elements) => {
+      if (elements.length > 0) {
+        const clickedElement = elements[0];
+        const theme = chartData.labels[clickedElement.index];
+        fetchThemeInsights(theme);
+      }
+    },
+    plugins: {
+      legend: {
+        position: "right",
+        labels: {
+          padding: 20,
+          font: {
+            size: 12,
+          },
+          color: "#333",
+          cursor: "pointer",
+        },
+        onClick: (event, legendItem) => {
+          const theme = chartData.labels[legendItem.index];
+          fetchThemeInsights(theme);
+        },
+      },
+      tooltip: {
+        callbacks: {
+          label: (context) => {
+            const label = context.label || "";
+            const value = context.raw || 0;
+            const total = context.dataset.data.reduce((a, b) => a + b, 0);
+            const percentage =
+              total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+            return `${label}: ${value} (${percentage}%) - Click to view insights`;
+          },
+        },
+      },
+    },
+  };
+
+  const renderChart = () => {
+    return (
+      <div className="h-full space-y-4">
+        <div className="h-3/4">
+          <Pie
+            data={chartData}
+            options={chartOptions}
+            fallback={<div>Could not load chart</div>}
+          />
+        </div>
+
+        {selectedTheme && (
+          <div className="h-1/4 overflow-auto">
+            <div className="bg-gray-50 rounded-lg p-4">
+              <div className="flex justify-between items-center mb-4">
+                <h4 className="font-medium text-gray-800">
+                  Insights for theme: {selectedTheme}
+                </h4>
+                <button
+                  onClick={() => setSelectedTheme(null)}
+                  className="text-sm text-gray-500 hover:text-gray-700"
+                >
+                  Close
+                </button>
+              </div>
+              <div className="space-y-2">
+                {themeInsights.map((insight, index) => (
+                  <div
+                    key={index}
+                    className="bg-white p-3 rounded-md shadow-sm border border-gray-100"
+                  >
+                    <p className="text-sm text-gray-600">{insight.insight}</p>
+                    <div className="mt-2 flex gap-2">
+                      <span className="text-xs px-2 py-1 bg-blue-100 text-blue-800 rounded-full">
+                        {insight.product_area}
+                      </span>
+                      <span className="text-xs px-2 py-1 bg-green-100 text-green-800 rounded-full">
+                        {insight.feedback}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -219,29 +454,151 @@ const Analyze = () => {
           className="bg-white rounded-lg shadow p-6 mb-8"
         >
           <h2 className="text-xl font-semibold mb-6">Analytics Dashboard</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {/* Placeholder for analytics components */}
-            <div className="bg-indigo-50 p-6 rounded-lg">
-              <h3 className="font-medium text-indigo-800 mb-2">
-                Total Meetings
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <div
+              className="md:col-span-3 bg-white p-6 rounded-lg shadow-sm border border-gray-100"
+              style={{ height: "600px" }}
+            >
+              <h3 className="font-medium text-gray-800 mb-4">
+                Theme Distribution
               </h3>
-              <p className="text-3xl font-bold text-indigo-600">
-                {meetings.length}
+              {Object.keys(themeDistribution).length === 0 ? (
+                <div className="h-full flex items-center justify-center">
+                  <FaSpinner className="animate-spin text-3xl text-indigo-600" />
+                </div>
+              ) : (
+                renderChart()
+              )}
+            </div>
+            <div className="space-y-4">
+              <div className="bg-indigo-50 p-6 rounded-lg">
+                <h3 className="font-medium text-indigo-800 mb-2">
+                  Total Meetings
+                </h3>
+                <p className="text-3xl font-bold text-indigo-600">
+                  {meetings.length}
+                </p>
+              </div>
+              <div className="bg-green-50 p-6 rounded-lg">
+                <h3 className="font-medium text-green-800 mb-2">Total Clips</h3>
+                <p className="text-3xl font-bold text-green-600">
+                  {clips.length}
+                </p>
+              </div>
+              <div className="bg-purple-50 p-6 rounded-lg">
+                <h3 className="font-medium text-purple-800 mb-2">
+                  Insights Generated
+                </h3>
+                <p className="text-3xl font-bold text-purple-600">
+                  {Object.keys(clipFeedback).length}
+                </p>
+              </div>
+            </div>
+          </div>
+        </motion.div>
+
+        {/* Add new Theme Insights Filter Section */}
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-white rounded-lg shadow p-6 mb-8"
+        >
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h2 className="text-xl font-semibold">Theme Insights Explorer</h2>
+              <p className="text-gray-600 mt-1">
+                Explore customer feedback insights grouped by themes
               </p>
             </div>
-            <div className="bg-green-50 p-6 rounded-lg">
-              <h3 className="font-medium text-green-800 mb-2">Total Clips</h3>
-              <p className="text-3xl font-bold text-green-600">
-                {clips.length}
-              </p>
-            </div>
-            <div className="bg-purple-50 p-6 rounded-lg">
-              <h3 className="font-medium text-purple-800 mb-2">
-                Insights Generated
-              </h3>
-              <p className="text-3xl font-bold text-purple-600">
-                {Object.keys(clipFeedback).length}
-              </p>
+          </div>
+
+          <div className="space-y-6">
+            <div className="flex flex-col gap-4">
+              <div className="flex items-center gap-4">
+                <select
+                  value={selectedFilterTheme}
+                  onChange={(e) => fetchInsightsByTheme(e.target.value)}
+                  className="block w-64 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                >
+                  <option value="">Select a theme</option>
+                  {allThemes.map((theme) => (
+                    <option key={theme} value={theme}>
+                      {theme}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {!selectedFilterTheme && (
+                <div className="bg-gray-50 rounded-lg p-8 text-center">
+                  <div className="mb-4">
+                    <FaChartBar className="mx-auto text-4xl text-gray-400" />
+                  </div>
+                  <h3 className="text-lg font-medium text-gray-800 mb-2">
+                    Select a Theme to Explore Insights
+                  </h3>
+                  <p className="text-gray-600 max-w-md mx-auto">
+                    Choose a theme from the dropdown above to view related
+                    customer feedback and insights. Each insight includes the
+                    product area affected and the type of feedback received.
+                  </p>
+                </div>
+              )}
+
+              {selectedFilterTheme && (
+                <div className="bg-gray-50 rounded-lg p-6">
+                  <div className="mb-6">
+                    <h3 className="text-lg font-medium text-gray-800 mb-2">
+                      Insights for theme: {selectedFilterTheme}
+                    </h3>
+                    <div className="flex gap-4 text-sm text-gray-600">
+                      <div className="flex items-center">
+                        <div className="w-3 h-3 rounded-full bg-blue-100 mr-2"></div>
+                        <span>
+                          Product Area: The specific feature or section
+                          discussed
+                        </span>
+                      </div>
+                      <div className="flex items-center">
+                        <div className="w-3 h-3 rounded-full bg-green-100 mr-2"></div>
+                        <span>
+                          Feedback Type: Nature of the customer's input
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="grid gap-4">
+                    {filteredInsights.map((insight, index) => (
+                      <div
+                        key={index}
+                        className="bg-white p-6 rounded-lg shadow-sm border border-gray-100 hover:border-indigo-200 transition-colors"
+                      >
+                        <p className="text-gray-800 text-lg mb-4">
+                          {insight.insight}
+                        </p>
+                        <div className="flex gap-3 flex-wrap">
+                          <div className="flex items-center">
+                            <span className="text-sm font-medium text-gray-600 mr-2">
+                              Product Area:
+                            </span>
+                            <span className="text-sm px-3 py-1 bg-blue-100 text-blue-800 rounded-full">
+                              {insight.product_area}
+                            </span>
+                          </div>
+                          <div className="flex items-center">
+                            <span className="text-sm font-medium text-gray-600 mr-2">
+                              Feedback Type:
+                            </span>
+                            <span className="text-sm px-3 py-1 bg-green-100 text-green-800 rounded-full">
+                              {insight.feedback}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </motion.div>
