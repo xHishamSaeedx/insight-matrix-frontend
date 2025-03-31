@@ -12,6 +12,8 @@ import {
   BarElement,
 } from "chart.js";
 import { Pie, Bar } from "react-chartjs-2";
+import { marked } from "marked";
+import DOMPurify from "dompurify";
 
 // Register ChartJS components
 ChartJS.register(
@@ -42,6 +44,9 @@ const Analyze = () => {
     useState(false);
   const [selectedDistributionTheme, setSelectedDistributionTheme] =
     useState("all");
+  const [aiAnalysis, setAiAnalysis] = useState(null);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [analysisError, setAnalysisError] = useState(null);
 
   useEffect(() => {
     fetchUserWorkspace();
@@ -367,6 +372,137 @@ const Analyze = () => {
       console.error("Error fetching insight distribution:", error);
     } finally {
       setLoadingInsightDistribution(false);
+    }
+  };
+
+  const generateAIAnalysis = async () => {
+    setIsAnalyzing(true);
+    setAnalysisError(null);
+
+    try {
+      // Prepare the data for analysis
+      const insightData = Object.entries(insightDistribution).map(
+        ([insight, data]) => ({
+          insight,
+          count: data.count,
+          sentiment: data.overallSentiment,
+          sentimentScore: data.sentimentScore,
+          theme: data.theme,
+        })
+      );
+
+      const themeData = Object.entries(themeDistribution).map(
+        ([theme, count]) => ({
+          theme,
+          count,
+        })
+      );
+
+      const prompt = `As a customer feedback analyst, analyze this data and provide strategic insights. Format your response using this markdown structure:
+
+# Customer Feedback Analysis Summary
+
+## Top 3 Significant Themes
+${themeData.length > 0 ? "" : "*(No theme data available)*"}
+
+## Overall Sentiment Analysis
+- **Positive Trends**: 
+- **Areas of Concern**: 
+- **Neutral Patterns**: 
+
+## Key Recommendations
+### Immediate Action Items
+1. 
+2. 
+3. 
+
+### Strategic Opportunities
+1. 
+2. 
+3. 
+
+### Areas to Maintain
+1. 
+2. 
+3. 
+
+## Detailed Analysis
+
+### Theme Distribution Analysis
+${JSON.stringify(themeData, null, 2)}
+
+### Customer Sentiment Patterns
+${JSON.stringify(insightData, null, 2)}
+
+---
+*Analysis generated based on ${insightData.length} insights across ${
+        themeData.length
+      } themes*`;
+
+      const response = await fetch(
+        "https://api.openai.com/v1/chat/completions",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${import.meta.env.VITE_OPENAI_API_KEY}`,
+          },
+          body: JSON.stringify({
+            model: import.meta.env.VITE_OPENAI_MODEL || "gpt-4-turbo-preview",
+            messages: [
+              {
+                role: "user",
+                content: prompt,
+              },
+            ],
+            temperature: 0.7,
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to generate analysis");
+      }
+
+      const result = await response.json();
+      const markdown = result.choices[0].message.content;
+
+      // Process the markdown with custom options
+      marked.setOptions({
+        gfm: true, // GitHub Flavored Markdown
+        breaks: true, // Convert line breaks to <br>
+        headerIds: true, // Add IDs to headers
+        mangle: false, // Don't escape HTML
+        headerPrefix: "analysis-", // Prefix for header IDs
+        highlight: function (code) {
+          // Add syntax highlighting if needed
+          return code;
+        },
+      });
+
+      // Sanitize and set the processed markdown
+      const sanitizedHtml = DOMPurify.sanitize(marked(markdown), {
+        ADD_TAGS: [
+          "h1",
+          "h2",
+          "h3",
+          "ul",
+          "ol",
+          "li",
+          "p",
+          "strong",
+          "em",
+          "blockquote",
+        ],
+        ADD_ATTR: ["id", "class"],
+      });
+
+      setAiAnalysis(sanitizedHtml);
+    } catch (error) {
+      console.error("Error generating analysis:", error);
+      setAnalysisError("Failed to generate AI analysis. Please try again.");
+    } finally {
+      setIsAnalyzing(false);
     }
   };
 
@@ -937,6 +1073,125 @@ const Analyze = () => {
               </div>
             )}
           </div>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="bg-white rounded-lg shadow p-6 mb-8"
+        >
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h2 className="text-xl font-semibold">
+                AI-Powered Strategic Analysis
+              </h2>
+              <p className="text-gray-600 mt-1">
+                Comprehensive analysis of customer feedback patterns and
+                recommendations
+              </p>
+            </div>
+            <button
+              onClick={generateAIAnalysis}
+              disabled={
+                isAnalyzing || Object.keys(insightDistribution).length === 0
+              }
+              className={`px-4 py-2 rounded-lg flex items-center gap-2 ${
+                isAnalyzing || Object.keys(insightDistribution).length === 0
+                  ? "bg-gray-100 text-gray-500 cursor-not-allowed"
+                  : "bg-indigo-600 text-white hover:bg-indigo-700"
+              }`}
+            >
+              {isAnalyzing ? (
+                <>
+                  <FaSpinner className="animate-spin" />
+                  Analyzing...
+                </>
+              ) : (
+                <>
+                  <FaPlay className="text-sm" />
+                  Generate Analysis
+                </>
+              )}
+            </button>
+          </div>
+
+          {analysisError && (
+            <div className="bg-red-50 text-red-800 p-4 rounded-lg mb-4">
+              {analysisError}
+            </div>
+          )}
+
+          {!aiAnalysis && !isAnalyzing && (
+            <div className="text-center py-12">
+              <div className="bg-gray-50 rounded-lg p-8">
+                <FaChartBar className="mx-auto text-4xl text-gray-400 mb-4" />
+                <h3 className="text-lg font-medium text-gray-800 mb-2">
+                  Generate AI Analysis
+                </h3>
+                <p className="text-gray-600 max-w-md mx-auto">
+                  Click the button above to generate a comprehensive analysis of
+                  your customer feedback, including key patterns,
+                  recommendations, and action items.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {aiAnalysis && (
+            <div className="prose prose-lg max-w-none">
+              <div
+                className="markdown-content space-y-6"
+                dangerouslySetInnerHTML={{ __html: aiAnalysis }}
+              />
+              <style jsx global>{`
+                .markdown-content h1 {
+                  color: #1a202c;
+                  font-size: 2.25rem;
+                  font-weight: 800;
+                  margin-bottom: 1.5rem;
+                  border-bottom: 2px solid #e2e8f0;
+                  padding-bottom: 0.5rem;
+                }
+                .markdown-content h2 {
+                  color: #2d3748;
+                  font-size: 1.5rem;
+                  font-weight: 700;
+                  margin-top: 2rem;
+                  margin-bottom: 1rem;
+                }
+                .markdown-content h3 {
+                  color: #4a5568;
+                  font-size: 1.25rem;
+                  font-weight: 600;
+                  margin-top: 1.5rem;
+                  margin-bottom: 0.75rem;
+                }
+                .markdown-content ul,
+                .markdown-content ol {
+                  margin-left: 1.5rem;
+                  margin-bottom: 1rem;
+                }
+                .markdown-content li {
+                  margin-bottom: 0.5rem;
+                }
+                .markdown-content strong {
+                  color: #2d3748;
+                  font-weight: 600;
+                }
+                .markdown-content blockquote {
+                  border-left: 4px solid #e2e8f0;
+                  padding-left: 1rem;
+                  margin: 1.5rem 0;
+                  color: #4a5568;
+                }
+                .markdown-content hr {
+                  margin: 2rem 0;
+                  border-color: #e2e8f0;
+                }
+              `}</style>
+            </div>
+          )}
         </motion.div>
 
         {loading ? (
