@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react";
-import { motion } from "framer-motion";
 import { supabase } from "../lib/supabase";
 import { FaChartBar, FaSpinner, FaPlay, FaFolder } from "react-icons/fa";
 import {
@@ -33,6 +32,8 @@ const Analyze = () => {
   const [workspaceId, setWorkspaceId] = useState(null);
   const [clipUrls, setClipUrls] = useState({});
   const [clipFeedback, setClipFeedback] = useState({});
+  const [transcript, setTranscript] = useState(null);
+  const [loadingTranscript, setLoadingTranscript] = useState(false);
   const [themeDistribution, setThemeDistribution] = useState({});
   const [selectedTheme, setSelectedTheme] = useState(null);
   const [themeInsights, setThemeInsights] = useState([]);
@@ -40,8 +41,6 @@ const Analyze = () => {
   const [filteredInsights, setFilteredInsights] = useState([]);
   const [selectedFilterTheme, setSelectedFilterTheme] = useState("");
   const [insightDistribution, setInsightDistribution] = useState({});
-  const [loadingInsightDistribution, setLoadingInsightDistribution] =
-    useState(false);
   const [selectedDistributionTheme, setSelectedDistributionTheme] =
     useState("all");
   const [aiAnalysis, setAiAnalysis] = useState(null);
@@ -83,30 +82,49 @@ const Analyze = () => {
 
   const fetchMeetings = async (wsId) => {
     try {
-      console.log("Fetching meetings for workspace:", wsId); // Debug log
+      console.log("Fetching meetings for workspace:", wsId);
 
-      // List all folders in the workspace directory
+      // List all files in the transcripts directory recursively
       const { data, error } = await supabase.storage
-        .from("conversations")
-        .list(wsId.toString()); // Convert to string in case it's a number
+        .from("transcripts")
+        .list(wsId.toString(), {
+          sortBy: { column: "name", order: "asc" },
+        });
 
       if (error) {
-        console.error("Storage list error:", error); // Debug log
+        console.error("Storage list error:", error);
         throw error;
       }
 
-      console.log("Raw storage data:", data); // Debug log
+      console.log("Raw storage data:", data);
 
-      // Filter out non-directory items if any
-      const meetingFolders =
-        data?.filter(
+      // Extract meeting names from the data
+      // Each meeting should be a directory containing transcript.json
+      const meetingFolders = data
+        .filter(
           (item) =>
             item.metadata?.mimetype === "application/x-directory" ||
-            !item.metadata?.mimetype // Include items without mimetype as they might be folders
-        ) || [];
+            !item.metadata?.mimetype
+        )
+        .map((item) => ({
+          name: item.name,
+          created_at: item.created_at,
+        }));
 
-      console.log("Filtered meeting folders:", meetingFolders); // Debug log
-      setMeetings(meetingFolders);
+      // For each meeting folder, verify it has a transcript.json
+      const verifiedMeetings = [];
+      for (const meeting of meetingFolders) {
+        const { data: files } = await supabase.storage
+          .from("transcripts")
+          .list(`${wsId}/${meeting.name}`);
+
+        if (files?.some((file) => file.name === "transcript.json")) {
+          verifiedMeetings.push(meeting);
+        }
+      }
+
+      console.log("Verified meetings with transcripts:", verifiedMeetings);
+      setMeetings(verifiedMeetings);
     } catch (error) {
       console.error("Error fetching meetings:", error);
     } finally {
@@ -114,22 +132,68 @@ const Analyze = () => {
     }
   };
 
+  const fetchTranscript = async (meetingTitle) => {
+    try {
+      setLoadingTranscript(true);
+      setSelectedMeeting(meetingTitle);
+      console.log(
+        "Fetching transcript for:",
+        `${workspaceId}/${meetingTitle}/transcript.json`
+      );
+
+      // Get the transcript.json file
+      const { data, error } = await supabase.storage
+        .from("transcripts")
+        .download(`${workspaceId}/${meetingTitle}/transcript.json`);
+
+      if (error) {
+        console.error("Transcript fetch error:", error);
+        throw error;
+      }
+
+      // Parse the JSON blob
+      const transcriptText = await data.text();
+      const transcriptData = JSON.parse(transcriptText);
+      console.log("Transcript data:", transcriptData);
+
+      // Handle the actual transcript format with utterances
+      if (transcriptData.utterances) {
+        setTranscript({
+          audio_duration: transcriptData.audio_duration,
+          segments: transcriptData.utterances.map((utterance) => ({
+            text: utterance.text,
+            start: utterance.start / 1000, // Convert to seconds
+            end: utterance.end / 1000, // Convert to seconds
+            speaker: utterance.speaker,
+            sentiment: utterance.sentiment,
+          })),
+        });
+      } else {
+        console.error("Unexpected transcript format:", transcriptData);
+        setTranscript(null);
+      }
+
+      // After getting transcript, check for clips
+      await fetchClips(meetingTitle);
+    } catch (error) {
+      console.error("Error fetching transcript:", error);
+      setTranscript(null);
+    } finally {
+      setLoadingTranscript(false);
+    }
+  };
+
   const fetchClips = async (meetingTitle) => {
     try {
-      setSelectedMeeting(meetingTitle);
-      console.log("Fetching clips for meeting:", meetingTitle); // Debug log
-
-      // List all clips in the meeting directory
+      // List all clips in the conversations directory
       const { data, error } = await supabase.storage
         .from("conversations")
         .list(`${workspaceId}/${meetingTitle}`);
 
       if (error) {
-        console.error("Clips list error:", error); // Debug log
+        console.error("Clips list error:", error);
         throw error;
       }
-
-      console.log("Raw clips data:", data); // Debug log
 
       // Filter for audio/video files
       const clipFiles =
@@ -139,10 +203,11 @@ const Analyze = () => {
             item.metadata?.mimetype?.startsWith("video/")
         ) || [];
 
-      console.log("Filtered clips:", clipFiles); // Debug log
+      console.log("Filtered clips:", clipFiles);
       setClips(clipFiles);
     } catch (error) {
       console.error("Error fetching clips:", error);
+      setClips([]);
     }
   };
 
@@ -316,11 +381,8 @@ const Analyze = () => {
     return score;
   };
 
-  // Update the fetchInsightDistribution function
   const fetchInsightDistribution = async () => {
     try {
-      setLoadingInsightDistribution(true);
-
       const { data: insightsData, error: insightsError } = await supabase
         .from("feedback_insights")
         .select("feedback_insights_id, theme, insight")
@@ -357,7 +419,6 @@ const Analyze = () => {
           theme: insight.theme,
           sentiments: sentimentCounts,
           sentimentScore: sentimentScore,
-          // Add sentiment classification based on score
           overallSentiment:
             sentimentScore > 0.3
               ? "Mostly Positive"
@@ -370,8 +431,6 @@ const Analyze = () => {
       setInsightDistribution(distributionData);
     } catch (error) {
       console.error("Error fetching insight distribution:", error);
-    } finally {
-      setLoadingInsightDistribution(false);
     }
   };
 
@@ -832,11 +891,7 @@ ${JSON.stringify(insightData, null, 2)}
 
       <div className="container mx-auto px-6 py-8">
         {/* Analytics Dashboard Section */}
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-white rounded-lg shadow p-6 mb-8"
-        >
+        <div className="bg-white rounded-lg shadow p-6 mb-8">
           <h2 className="text-xl font-semibold mb-6">Analytics Dashboard</h2>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
             <div
@@ -879,14 +934,10 @@ ${JSON.stringify(insightData, null, 2)}
               </div>
             </div>
           </div>
-        </motion.div>
+        </div>
 
         {/* Add new Theme Insights Filter Section */}
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-white rounded-lg shadow p-6 mb-8"
-        >
+        <div className="bg-white rounded-lg shadow p-6 mb-8">
           <div className="flex items-center justify-between mb-6">
             <div>
               <h2 className="text-xl font-semibold">Theme Insights Explorer</h2>
@@ -985,15 +1036,10 @@ ${JSON.stringify(insightData, null, 2)}
               )}
             </div>
           </div>
-        </motion.div>
+        </div>
 
         {/* Add this after the Analytics Dashboard section */}
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="bg-white rounded-lg shadow p-6 mb-8"
-        >
+        <div className="bg-white rounded-lg shadow p-6 mb-8">
           <div className="flex items-center justify-between mb-6">
             <div>
               <h2 className="text-xl font-semibold">Insights Distribution</h2>
@@ -1073,14 +1119,9 @@ ${JSON.stringify(insightData, null, 2)}
               </div>
             )}
           </div>
-        </motion.div>
+        </div>
 
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="bg-white rounded-lg shadow p-6 mb-8"
-        >
+        <div className="bg-white rounded-lg shadow p-6 mb-8">
           <div className="flex items-center justify-between mb-6">
             <div>
               <h2 className="text-xl font-semibold">
@@ -1192,7 +1233,7 @@ ${JSON.stringify(insightData, null, 2)}
               `}</style>
             </div>
           )}
-        </motion.div>
+        </div>
 
         {loading ? (
           <div className="flex justify-center items-center">
@@ -1211,15 +1252,14 @@ ${JSON.stringify(insightData, null, 2)}
               ) : (
                 <div className="space-y-4">
                   {meetings.map((meeting) => (
-                    <motion.div
+                    <div
                       key={meeting.name}
-                      whileHover={{ scale: 1.02 }}
                       className={`p-4 rounded-lg cursor-pointer transition-colors ${
                         selectedMeeting === meeting.name
                           ? "bg-indigo-50 border-2 border-indigo-500"
                           : "bg-gray-50 hover:bg-gray-100"
                       }`}
-                      onClick={() => fetchClips(meeting.name)}
+                      onClick={() => fetchTranscript(meeting.name)}
                     >
                       <h3 className="font-medium text-gray-800">
                         {meeting.name}
@@ -1227,138 +1267,183 @@ ${JSON.stringify(insightData, null, 2)}
                       <p className="text-sm text-gray-500">
                         {new Date(meeting.created_at).toLocaleDateString()}
                       </p>
-                    </motion.div>
+                    </div>
                   ))}
                 </div>
               )}
             </div>
 
-            {/* Clips Panel - Right Panel */}
+            {/* Transcript and Clips Panel - Right Panel */}
             <div className="md:col-span-2 bg-white rounded-lg shadow p-6">
-              <h2 className="text-xl font-semibold mb-4">
-                {selectedMeeting
-                  ? `Clips - ${selectedMeeting}`
-                  : "Select a meeting to view clips"}
-              </h2>
-              {selectedMeeting ? (
-                clips.length === 0 ? (
-                  <div className="text-center py-12">
-                    <FaChartBar className="mx-auto text-4xl text-gray-400 mb-4" />
-                    <p className="text-gray-500">
-                      No clips found in this meeting
-                    </p>
-                  </div>
-                ) : (
-                  <div className="grid gap-4">
-                    {clips.map((clip) => (
-                      <motion.div
-                        key={clip.name}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="bg-gray-50 rounded-lg p-4"
-                      >
-                        <div className="space-y-4">
-                          <div>
-                            <h3 className="font-medium text-gray-800">
-                              {clip.name}
-                            </h3>
-                            <p className="text-sm text-gray-500">
-                              {(clip.metadata?.size / 1024 / 1024).toFixed(2)}{" "}
-                              MB
-                            </p>
-                          </div>
-
-                          {clipUrls[clip.name] && (
-                            <div className="w-full">
-                              {clip.metadata?.mimetype?.startsWith("video/") ? (
-                                <video
-                                  className="w-full rounded-lg"
-                                  controls
-                                  preload="metadata"
-                                  src={clipUrls[clip.name].url}
-                                >
-                                  Your browser does not support the video
-                                  element.
-                                </video>
-                              ) : (
-                                <audio
-                                  className="w-full"
-                                  controls
-                                  preload="metadata"
-                                  src={clipUrls[clip.name].url}
-                                >
-                                  Your browser does not support the audio
-                                  element.
-                                </audio>
-                              )}
-                            </div>
-                          )}
-
-                          {clipFeedback[clip.name] && (
-                            <div className="mt-4 space-y-2 bg-white p-4 rounded-lg border border-gray-200">
-                              <div className="flex items-center justify-between">
-                                <span className="font-medium text-gray-700">
-                                  Sentiment:
-                                </span>
-                                <span
-                                  className={`px-3 py-1 rounded-full text-sm ${
-                                    clipFeedback[clip.name].sentiment ===
-                                    "positive"
-                                      ? "bg-green-100 text-green-800"
-                                      : clipFeedback[clip.name].sentiment ===
-                                        "negative"
-                                      ? "bg-red-100 text-red-800"
-                                      : "bg-yellow-100 text-yellow-800"
-                                  }`}
-                                >
-                                  {clipFeedback[clip.name].sentiment}
-                                </span>
-                              </div>
-                              <div>
-                                <span className="font-medium text-gray-700">
-                                  Theme:
-                                </span>
-                                <p className="text-gray-600">
-                                  {clipFeedback[clip.name].theme}
-                                </p>
-                              </div>
-                              <div>
-                                <span className="font-medium text-gray-700">
-                                  Product Area:
-                                </span>
-                                <p className="text-gray-600">
-                                  {clipFeedback[clip.name].product_area}
-                                </p>
-                              </div>
-                              <div>
-                                <span className="font-medium text-gray-700">
-                                  Insight:
-                                </span>
-                                <p className="text-gray-600">
-                                  {clipFeedback[clip.name].insight}
-                                </p>
-                              </div>
-                              <div>
-                                <span className="font-medium text-gray-700">
-                                  Feedback:
-                                </span>
-                                <p className="text-gray-600">
-                                  {clipFeedback[clip.name].feedback}
-                                </p>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      </motion.div>
-                    ))}
-                  </div>
-                )
-              ) : (
+              {!selectedMeeting ? (
                 <div className="text-center py-12">
                   <FaFolder className="mx-auto text-4xl text-gray-400 mb-4" />
                   <p className="text-gray-500">
-                    Select a meeting to view clips
+                    Select a meeting to view transcript and clips
                   </p>
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  {/* Transcript Section */}
+                  <div>
+                    <h2 className="text-xl font-semibold mb-4">
+                      Transcript - {selectedMeeting}
+                    </h2>
+                    {loadingTranscript ? (
+                      <div className="flex justify-center py-8">
+                        <FaSpinner className="animate-spin text-3xl text-indigo-600" />
+                      </div>
+                    ) : transcript ? (
+                      <div className="bg-gray-50 rounded-lg p-4 max-h-[400px] overflow-y-auto">
+                        {transcript.segments?.map((segment, index) => (
+                          <div
+                            key={index}
+                            className={`mb-4 p-3 rounded shadow-sm ${
+                              index % 2 === 0 ? "bg-white" : "bg-gray-50"
+                            }`}
+                          >
+                            <div className="flex justify-between items-center mb-2">
+                              <span className="text-sm font-medium text-indigo-600">
+                                {segment.speaker}
+                              </span>
+                              <span className="text-xs text-gray-500">
+                                {new Date(segment.start * 1000)
+                                  .toISOString()
+                                  .substr(11, 8)}
+                                {" - "}
+                                {new Date(segment.end * 1000)
+                                  .toISOString()
+                                  .substr(11, 8)}
+                              </span>
+                            </div>
+                            <p className="text-gray-800 whitespace-pre-wrap">
+                              {segment.text}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-center py-8">
+                        <p className="text-gray-500">No transcript available</p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Clips Section */}
+                  <div>
+                    <h2 className="text-xl font-semibold mb-4">Clips</h2>
+                    {clips.length === 0 ? (
+                      <div className="text-center py-8">
+                        <p className="text-gray-500">No clips available</p>
+                      </div>
+                    ) : (
+                      <div className="grid gap-4">
+                        {clips.map((clip) => (
+                          <div
+                            key={clip.name}
+                            className="bg-gray-50 rounded-lg p-4"
+                          >
+                            <div className="space-y-4">
+                              <div>
+                                <h3 className="font-medium text-gray-800">
+                                  {clip.name}
+                                </h3>
+                                <p className="text-sm text-gray-500">
+                                  {(clip.metadata?.size / 1024 / 1024).toFixed(
+                                    2
+                                  )}{" "}
+                                  MB
+                                </p>
+                              </div>
+
+                              {clipUrls[clip.name] && (
+                                <div className="w-full">
+                                  {clip.metadata?.mimetype?.startsWith(
+                                    "video/"
+                                  ) ? (
+                                    <video
+                                      className="w-full rounded-lg"
+                                      controls
+                                      preload="metadata"
+                                      src={clipUrls[clip.name].url}
+                                    >
+                                      Your browser does not support the video
+                                      element.
+                                    </video>
+                                  ) : (
+                                    <audio
+                                      className="w-full"
+                                      controls
+                                      preload="metadata"
+                                      src={clipUrls[clip.name].url}
+                                    >
+                                      Your browser does not support the audio
+                                      element.
+                                    </audio>
+                                  )}
+                                </div>
+                              )}
+
+                              {clipFeedback[clip.name] && (
+                                <div className="mt-4 space-y-2 bg-white p-4 rounded-lg border border-gray-200">
+                                  <div className="flex items-center justify-between">
+                                    <span className="font-medium text-gray-700">
+                                      Sentiment:
+                                    </span>
+                                    <span
+                                      className={`px-3 py-1 rounded-full text-sm ${
+                                        clipFeedback[clip.name].sentiment ===
+                                        "positive"
+                                          ? "bg-green-100 text-green-800"
+                                          : clipFeedback[clip.name]
+                                              .sentiment === "negative"
+                                          ? "bg-red-100 text-red-800"
+                                          : "bg-yellow-100 text-yellow-800"
+                                      }`}
+                                    >
+                                      {clipFeedback[clip.name].sentiment}
+                                    </span>
+                                  </div>
+                                  <div>
+                                    <span className="font-medium text-gray-700">
+                                      Theme:
+                                    </span>
+                                    <p className="text-gray-600">
+                                      {clipFeedback[clip.name].theme}
+                                    </p>
+                                  </div>
+                                  <div>
+                                    <span className="font-medium text-gray-700">
+                                      Product Area:
+                                    </span>
+                                    <p className="text-gray-600">
+                                      {clipFeedback[clip.name].product_area}
+                                    </p>
+                                  </div>
+                                  <div>
+                                    <span className="font-medium text-gray-700">
+                                      Insight:
+                                    </span>
+                                    <p className="text-gray-600">
+                                      {clipFeedback[clip.name].insight}
+                                    </p>
+                                  </div>
+                                  <div>
+                                    <span className="font-medium text-gray-700">
+                                      Feedback:
+                                    </span>
+                                    <p className="text-gray-600">
+                                      {clipFeedback[clip.name].feedback}
+                                    </p>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
             </div>
