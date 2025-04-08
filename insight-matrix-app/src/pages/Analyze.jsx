@@ -59,13 +59,23 @@ const Analyze = () => {
     title: "",
     download_url: "",
   });
+  const [isLoadingThemes, setIsLoadingThemes] = useState(true);
+  const [isLoadingInsights, setIsLoadingInsights] = useState(true);
 
   useEffect(() => {
-    fetchUserWorkspace();
-    fetchThemeDistribution();
-    fetchAllThemes();
-    fetchInsightDistribution();
+    const initializeData = async () => {
+      await fetchUserWorkspace();
+    };
+    initializeData();
   }, []);
+
+  useEffect(() => {
+    if (workspaceId) {
+      fetchThemeDistribution();
+      fetchAllThemes();
+      fetchInsightDistribution();
+    }
+  }, [workspaceId]);
 
   const fetchUserWorkspace = async () => {
     try {
@@ -310,15 +320,17 @@ const Analyze = () => {
   };
 
   const fetchThemeDistribution = async () => {
+    setIsLoadingThemes(true);
     try {
       const { data, error } = await supabase
         .from("feedback_insights")
         .select("theme")
-        .eq("source", "meeting");
+        .eq("source", "meeting")
+        .eq("workspace_id", workspaceId);
 
       if (error) throw error;
 
-      console.log("Raw feedback insights data:", data); // Debug log
+      console.log("Raw feedback insights data:", data);
 
       // Count occurrences of each theme
       const distribution = data.reduce((acc, curr) => {
@@ -326,10 +338,12 @@ const Analyze = () => {
         return acc;
       }, {});
 
-      console.log("Theme distribution:", distribution); // Debug log
+      console.log("Theme distribution:", distribution);
       setThemeDistribution(distribution);
     } catch (error) {
       console.error("Error fetching theme distribution:", error);
+    } finally {
+      setIsLoadingThemes(false);
     }
   };
 
@@ -355,11 +369,11 @@ const Analyze = () => {
       const { data, error } = await supabase
         .from("feedback_insights")
         .select("theme")
-        .eq("source", "meeting");
+        .eq("source", "meeting")
+        .eq("workspace_id", workspaceId);
 
       if (error) throw error;
 
-      // Get unique themes
       const uniqueThemes = [...new Set(data.map((item) => item.theme))];
       setAllThemes(uniqueThemes);
     } catch (error) {
@@ -395,13 +409,29 @@ const Analyze = () => {
   };
 
   const fetchInsightDistribution = async () => {
+    setIsLoadingInsights(true);
     try {
+      // Add more detailed logging
+      console.log("Fetching insights for workspace:", workspaceId);
+
       const { data: insightsData, error: insightsError } = await supabase
         .from("feedback_insights")
         .select("feedback_insights_id, theme, insight")
-        .eq("source", "meeting");
+        .eq("source", "meeting")
+        .eq("workspace_id", workspaceId);
 
-      if (insightsError) throw insightsError;
+      if (insightsError) {
+        console.error("Error fetching insights:", insightsError);
+        throw insightsError;
+      }
+
+      console.log("Found insights:", insightsData?.length || 0);
+
+      if (!insightsData?.length) {
+        console.log("No insights found for workspace");
+        setInsightDistribution({});
+        return;
+      }
 
       const distributionData = {};
 
@@ -412,6 +442,11 @@ const Analyze = () => {
           .eq("feedback_insight_id", insight.feedback_insights_id);
 
         if (countError) throw countError;
+
+        console.log(
+          `Feedback data for insight ${insight.insight}:`,
+          feedbackData
+        );
 
         const sentimentCounts = {
           POSITIVE: 0,
@@ -441,9 +476,13 @@ const Analyze = () => {
         };
       }
 
+      console.log("Final insight distribution:", distributionData);
       setInsightDistribution(distributionData);
     } catch (error) {
-      console.error("Error fetching insight distribution:", error);
+      console.error("Error in fetchInsightDistribution:", error);
+      setInsightDistribution({});
+    } finally {
+      setIsLoadingInsights(false);
     }
   };
 
@@ -686,6 +725,23 @@ ${JSON.stringify(insightData, null, 2)}
   };
 
   const renderChart = () => {
+    if (isLoadingThemes) {
+      return (
+        <div className="h-full flex items-center justify-center">
+          <FaSpinner className="animate-spin text-3xl text-indigo-600" />
+          <span className="ml-2 text-gray-600">Loading theme data...</span>
+        </div>
+      );
+    }
+
+    if (Object.keys(themeDistribution).length === 0) {
+      return (
+        <div className="h-full flex items-center justify-center">
+          <p className="text-gray-500">No theme data available</p>
+        </div>
+      );
+    }
+
     return (
       <div className="h-full space-y-4">
         <div className="h-3/4">
@@ -1054,13 +1110,7 @@ ${JSON.stringify(insightData, null, 2)}
               <h3 className="font-medium text-gray-800 mb-4">
                 Theme Distribution
               </h3>
-              {Object.keys(themeDistribution).length === 0 ? (
-                <div className="h-full flex items-center justify-center">
-                  <FaSpinner className="animate-spin text-3xl text-indigo-600" />
-                </div>
-              ) : (
-                renderChart()
-              )}
+              {renderChart()}
             </div>
             <div className="space-y-4">
               <div className="bg-indigo-50 p-6 rounded-lg">
