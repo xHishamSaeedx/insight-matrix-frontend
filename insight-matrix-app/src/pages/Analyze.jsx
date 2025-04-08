@@ -1,6 +1,12 @@
 import React, { useState, useEffect } from "react";
 import { supabase } from "../lib/supabase";
-import { FaChartBar, FaSpinner, FaPlay, FaFolder } from "react-icons/fa";
+import {
+  FaChartBar,
+  FaSpinner,
+  FaPlay,
+  FaFolder,
+  FaPlus,
+} from "react-icons/fa";
 import {
   Chart as ChartJS,
   ArcElement,
@@ -46,6 +52,13 @@ const Analyze = () => {
   const [aiAnalysis, setAiAnalysis] = useState(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisError, setAnalysisError] = useState(null);
+  const [showAddMeetingForm, setShowAddMeetingForm] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [processingStatus, setProcessingStatus] = useState("");
+  const [formData, setFormData] = useState({
+    title: "",
+    download_url: "",
+  });
 
   useEffect(() => {
     fetchUserWorkspace();
@@ -879,6 +892,55 @@ ${JSON.stringify(insightData, null, 2)}
     categoryPercentage: 0.9,
   };
 
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prevState) => ({
+      ...prevState,
+      [name]: value,
+    }));
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setIsProcessing(true);
+    setShowAddMeetingForm(false);
+    setProcessingStatus("Processing meeting...");
+
+    try {
+      const response = await fetch(
+        "http://localhost:8080/v1/api/process-recording",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            gcs_url: formData.download_url,
+            workspace_id: workspaceId,
+            title: formData.title,
+            source_type: "meeting",
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to process meeting");
+      }
+
+      setProcessingStatus("Meeting processed successfully!");
+      // Refresh meetings list
+      await fetchMeetings(workspaceId);
+    } catch (error) {
+      console.error("Error processing meeting:", error);
+      setProcessingStatus("Failed to process meeting. Please try again.");
+    } finally {
+      setTimeout(() => {
+        setProcessingStatus("");
+        setIsProcessing(false);
+      }, 3000);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-100">
       <div className="bg-white shadow">
@@ -890,6 +952,97 @@ ${JSON.stringify(insightData, null, 2)}
       </div>
 
       <div className="container mx-auto px-6 py-8">
+        <div className="flex justify-between items-center mb-8">
+          <h2 className="text-xl font-semibold">Meeting Analysis</h2>
+          <button
+            onClick={() => setShowAddMeetingForm(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+          >
+            <FaPlus className="text-sm" />
+            Add Meeting
+          </button>
+        </div>
+
+        {/* Add Meeting Form Modal */}
+        {showAddMeetingForm && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 w-full max-w-md">
+              <h3 className="text-xl font-semibold mb-4">Add New Meeting</h3>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div>
+                  <label
+                    htmlFor="title"
+                    className="block text-sm font-medium text-gray-700 mb-1"
+                  >
+                    Meeting Title
+                  </label>
+                  <input
+                    type="text"
+                    id="title"
+                    name="title"
+                    value={formData.title}
+                    onChange={handleInputChange}
+                    required
+                    className="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                  />
+                </div>
+                <div>
+                  <label
+                    htmlFor="download_url"
+                    className="block text-sm font-medium text-gray-700 mb-1"
+                  >
+                    Download URL
+                  </label>
+                  <input
+                    type="url"
+                    id="download_url"
+                    name="download_url"
+                    value={formData.download_url}
+                    onChange={handleInputChange}
+                    required
+                    className="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                  />
+                </div>
+                <div className="flex justify-end gap-3 mt-6">
+                  <button
+                    type="button"
+                    onClick={() => setShowAddMeetingForm(false)}
+                    className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+                  >
+                    Add Meeting
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* Processing Status Message */}
+        {processingStatus && (
+          <div
+            className={`fixed bottom-4 right-4 p-4 rounded-lg shadow-lg ${
+              processingStatus.includes("success")
+                ? "bg-green-100 text-green-800"
+                : processingStatus.includes("Failed")
+                ? "bg-red-100 text-red-800"
+                : "bg-blue-100 text-blue-800"
+            }`}
+          >
+            <p className="flex items-center gap-2">
+              {processingStatus.includes("Processing") && (
+                <FaSpinner className="animate-spin" />
+              )}
+              {processingStatus}
+            </p>
+          </div>
+        )}
+
         {/* Analytics Dashboard Section */}
         <div className="bg-white rounded-lg shadow p-6 mb-8">
           <h2 className="text-xl font-semibold mb-6">Analytics Dashboard</h2>
