@@ -1,22 +1,15 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { FaBars, FaTimes } from "react-icons/fa";
-import { Link } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const [user, setUser] = useState(null);
-
-  useEffect(() => {
-    const handleScroll = () => {
-      setIsScrolled(window.scrollY > 20);
-    };
-
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
+  const location = useLocation();
+  const navigate = useNavigate();
 
   useEffect(() => {
     // Get initial auth state
@@ -34,6 +27,15 @@ const Navbar = () => {
     return () => subscription.unsubscribe();
   }, []);
 
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 20);
+    };
+
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
   const navItems = [
     { title: "Features", href: "#features" },
     { title: "Solutions", href: "#solutions" },
@@ -45,18 +47,47 @@ const Navbar = () => {
     e.preventDefault();
     setIsOpen(false);
 
-    const target = document.querySelector(href);
-    if (!target) return;
+    if (location.pathname !== "/") {
+      // If not on homepage, navigate there first
+      navigate("/");
+      setTimeout(() => {
+        const target = document.querySelector(href);
+        if (target) {
+          const navHeight = 80; // Approximate navbar height
+          const targetPosition =
+            target.getBoundingClientRect().top + window.pageYOffset;
+          const offsetPosition = targetPosition - navHeight;
 
-    const navHeight = 80; // Approximate navbar height
-    const targetPosition =
-      target.getBoundingClientRect().top + window.pageYOffset;
-    const offsetPosition = targetPosition - navHeight;
+          window.scrollTo({
+            top: offsetPosition,
+            behavior: "smooth",
+          });
+        }
+      }, 100);
+    } else {
+      // If already on homepage, just scroll
+      const target = document.querySelector(href);
+      if (target) {
+        const navHeight = 80;
+        const targetPosition =
+          target.getBoundingClientRect().top + window.pageYOffset;
+        const offsetPosition = targetPosition - navHeight;
 
-    window.scrollTo({
-      top: offsetPosition,
-      behavior: "smooth",
-    });
+        window.scrollTo({
+          top: offsetPosition,
+          behavior: "smooth",
+        });
+      }
+    }
+  };
+
+  const handleSignOut = async () => {
+    try {
+      await supabase.auth.signOut();
+      navigate("/");
+    } catch (error) {
+      console.error("Error signing out:", error);
+    }
   };
 
   const menuVariants = {
@@ -81,10 +112,6 @@ const Navbar = () => {
   const itemVariants = {
     closed: { opacity: 0, x: -10 },
     open: { opacity: 1, x: 0 },
-  };
-
-  const handleSignOut = async () => {
-    await supabase.auth.signOut();
   };
 
   return (
@@ -123,13 +150,16 @@ const Navbar = () => {
                 {item.title}
               </motion.a>
             ))}
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              className="bg-gradient-to-r from-violet-500 to-indigo-600 text-white px-6 py-2 rounded-full font-semibold hover:shadow-lg transition duration-300"
-            >
-              Get Started
-            </motion.button>
+            {user && (
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={handleSignOut}
+                className="bg-red-500 text-white px-6 py-2 rounded-full font-semibold hover:bg-red-600 transition duration-300"
+              >
+                Sign Out
+              </motion.button>
+            )}
           </div>
 
           {/* Mobile Menu Button */}
@@ -164,14 +194,15 @@ const Navbar = () => {
                     {item.title}
                   </motion.a>
                 ))}
-                <motion.button
-                  variants={itemVariants}
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  className="bg-gradient-to-r from-violet-500 to-indigo-600 text-white px-6 py-2 rounded-full font-semibold hover:shadow-lg transition duration-300 w-full"
-                >
-                  Get Started
-                </motion.button>
+                {user && (
+                  <motion.button
+                    variants={itemVariants}
+                    onClick={handleSignOut}
+                    className="bg-red-500 text-white px-6 py-2 rounded-full font-semibold hover:bg-red-600 transition duration-300 w-full"
+                  >
+                    Sign Out
+                  </motion.button>
+                )}
               </div>
             </motion.div>
           )}

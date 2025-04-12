@@ -999,166 +999,272 @@ ${JSON.stringify(insightData, null, 2)}
 
   return (
     <div className="min-h-screen bg-gray-100">
-      <div className="bg-white shadow">
-        <div className="container mx-auto px-6 py-4">
-          <h1 className="text-2xl font-semibold text-gray-800">
-            Analyze Meetings
-          </h1>
-        </div>
-      </div>
-
-      <div className="container mx-auto px-6 py-8">
-        <div className="flex justify-between items-center mb-8">
-          <h2 className="text-xl font-semibold">Meeting Analysis</h2>
-          <button
-            onClick={() => setShowAddMeetingForm(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
-          >
-            <FaPlus className="text-sm" />
-            Add Meeting
-          </button>
-        </div>
-
-        {/* Add Meeting Form Modal */}
-        {showAddMeetingForm && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 w-full max-w-md">
-              <h3 className="text-xl font-semibold mb-4">Add New Meeting</h3>
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div>
-                  <label
-                    htmlFor="title"
-                    className="block text-sm font-medium text-gray-700 mb-1"
-                  >
-                    Meeting Title
-                  </label>
-                  <input
-                    type="text"
-                    id="title"
-                    name="title"
-                    value={formData.title}
-                    onChange={handleInputChange}
-                    required
-                    className="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                  />
-                </div>
-                <div>
-                  <label
-                    htmlFor="download_url"
-                    className="block text-sm font-medium text-gray-700 mb-1"
-                  >
-                    Download URL
-                  </label>
-                  <input
-                    type="url"
-                    id="download_url"
-                    name="download_url"
-                    value={formData.download_url}
-                    onChange={handleInputChange}
-                    required
-                    className="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                  />
-                </div>
-                <div className="flex justify-end gap-3 mt-6">
-                  <button
-                    type="button"
-                    onClick={() => setShowAddMeetingForm(false)}
-                    className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
-                  >
-                    Add Meeting
-                  </button>
-                </div>
-              </form>
-            </div>
+      {/* Main content wrapper - pushes content below navbar */}
+      <main className="pt-[64px]">
+        {/* Page header */}
+        <header className="bg-white shadow">
+          <div className="container mx-auto px-6 py-4">
+            <h1 className="text-2xl font-semibold text-gray-800">
+              Analyze Meetings
+            </h1>
           </div>
-        )}
+        </header>
 
-        {/* Processing Status Message */}
-        {processingStatus && (
-          <div
-            className={`fixed bottom-4 right-4 p-4 rounded-lg shadow-lg ${
-              processingStatus.includes("success")
-                ? "bg-green-100 text-green-800"
-                : processingStatus.includes("Failed")
-                ? "bg-red-100 text-red-800"
-                : "bg-blue-100 text-blue-800"
-            }`}
-          >
-            <p className="flex items-center gap-2">
-              {processingStatus.includes("Processing") && (
-                <FaSpinner className="animate-spin" />
-              )}
-              {processingStatus}
-            </p>
-          </div>
-        )}
-
-        {/* Analytics Dashboard Section */}
-        <div className="bg-white rounded-lg shadow p-6 mb-8">
-          <h2 className="text-xl font-semibold mb-6">Analytics Dashboard</h2>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-            <div
-              className="md:col-span-3 bg-white p-6 rounded-lg shadow-sm border border-gray-100"
-              style={{ height: "600px" }}
+        {/* Page content */}
+        <div className="container mx-auto px-6 py-8">
+          <div className="flex justify-between items-center mb-8">
+            <h2 className="text-xl font-semibold">Meeting Analysis</h2>
+            <button
+              onClick={() => setShowAddMeetingForm(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
             >
-              <h3 className="font-medium text-gray-800 mb-4">
-                Theme Distribution
-              </h3>
-              {renderChart()}
-            </div>
-            <div className="space-y-4">
-              <div className="bg-indigo-50 p-6 rounded-lg">
-                <h3 className="font-medium text-indigo-800 mb-2">
-                  Total Meetings
-                </h3>
-                <p className="text-3xl font-bold text-indigo-600">
-                  {meetings.length}
-                </p>
-              </div>
-              <div className="bg-green-50 p-6 rounded-lg">
-                <h3 className="font-medium text-green-800 mb-2">Total Clips</h3>
-                <p className="text-3xl font-bold text-green-600">
-                  {clips.length}
-                </p>
-              </div>
-              <div className="bg-purple-50 p-6 rounded-lg">
-                <h3 className="font-medium text-purple-800 mb-2">
-                  Insights Generated
-                </h3>
-                <p className="text-3xl font-bold text-purple-600">
-                  {Object.keys(clipFeedback).length}
-                </p>
-              </div>
-            </div>
+              <FaPlus className="text-sm" />
+              Add Meeting
+            </button>
           </div>
-        </div>
 
-        {/* Add new Theme Insights Filter Section */}
-        <div className="bg-white rounded-lg shadow p-6 mb-8">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h2 className="text-xl font-semibold">Theme Insights Explorer</h2>
-              <p className="text-gray-600 mt-1">
-                Explore customer feedback insights grouped by themes
+          {/* Add Meeting Form Modal */}
+          {showAddMeetingForm && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+              <div className="bg-white rounded-lg p-6 w-full max-w-md">
+                <h3 className="text-xl font-semibold mb-4">Add New Meeting</h3>
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  <div>
+                    <label
+                      htmlFor="title"
+                      className="block text-sm font-medium text-gray-700 mb-1"
+                    >
+                      Meeting Title
+                    </label>
+                    <input
+                      type="text"
+                      id="title"
+                      name="title"
+                      value={formData.title}
+                      onChange={handleInputChange}
+                      required
+                      className="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                    />
+                  </div>
+                  <div>
+                    <label
+                      htmlFor="download_url"
+                      className="block text-sm font-medium text-gray-700 mb-1"
+                    >
+                      Download URL
+                    </label>
+                    <input
+                      type="url"
+                      id="download_url"
+                      name="download_url"
+                      value={formData.download_url}
+                      onChange={handleInputChange}
+                      required
+                      className="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                    />
+                  </div>
+                  <div className="flex justify-end gap-3 mt-6">
+                    <button
+                      type="button"
+                      onClick={() => setShowAddMeetingForm(false)}
+                      className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+                    >
+                      Add Meeting
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
+
+          {/* Processing Status Message */}
+          {processingStatus && (
+            <div
+              className={`fixed bottom-4 right-4 p-4 rounded-lg shadow-lg ${
+                processingStatus.includes("success")
+                  ? "bg-green-100 text-green-800"
+                  : processingStatus.includes("Failed")
+                  ? "bg-red-100 text-red-800"
+                  : "bg-blue-100 text-blue-800"
+              }`}
+            >
+              <p className="flex items-center gap-2">
+                {processingStatus.includes("Processing") && (
+                  <FaSpinner className="animate-spin" />
+                )}
+                {processingStatus}
               </p>
             </div>
+          )}
+
+          {/* Analytics Dashboard Section */}
+          <div className="bg-white rounded-lg shadow p-6 mb-8">
+            <h2 className="text-xl font-semibold mb-6">Analytics Dashboard</h2>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+              <div
+                className="md:col-span-3 bg-white p-6 rounded-lg shadow-sm border border-gray-100"
+                style={{ height: "600px" }}
+              >
+                <h3 className="font-medium text-gray-800 mb-4">
+                  Theme Distribution
+                </h3>
+                {renderChart()}
+              </div>
+              <div className="space-y-4">
+                <div className="bg-indigo-50 p-6 rounded-lg">
+                  <h3 className="font-medium text-indigo-800 mb-2">
+                    Total Meetings
+                  </h3>
+                  <p className="text-3xl font-bold text-indigo-600">
+                    {meetings.length}
+                  </p>
+                </div>
+                <div className="bg-green-50 p-6 rounded-lg">
+                  <h3 className="font-medium text-green-800 mb-2">
+                    Total Clips
+                  </h3>
+                  <p className="text-3xl font-bold text-green-600">
+                    {clips.length}
+                  </p>
+                </div>
+                <div className="bg-purple-50 p-6 rounded-lg">
+                  <h3 className="font-medium text-purple-800 mb-2">
+                    Insights Generated
+                  </h3>
+                  <p className="text-3xl font-bold text-purple-600">
+                    {Object.keys(clipFeedback).length}
+                  </p>
+                </div>
+              </div>
+            </div>
           </div>
 
-          <div className="space-y-6">
-            <div className="flex flex-col gap-4">
+          {/* Add new Theme Insights Filter Section */}
+          <div className="bg-white rounded-lg shadow p-6 mb-8">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h2 className="text-xl font-semibold">
+                  Theme Insights Explorer
+                </h2>
+                <p className="text-gray-600 mt-1">
+                  Explore customer feedback insights grouped by themes
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-6">
+              <div className="flex flex-col gap-4">
+                <div className="flex items-center gap-4">
+                  <select
+                    value={selectedFilterTheme}
+                    onChange={(e) => fetchInsightsByTheme(e.target.value)}
+                    className="block w-64 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                  >
+                    <option value="">Select a theme</option>
+                    {allThemes.map((theme) => (
+                      <option key={theme} value={theme}>
+                        {theme}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {!selectedFilterTheme && (
+                  <div className="bg-gray-50 rounded-lg p-8 text-center">
+                    <div className="mb-4">
+                      <FaChartBar className="mx-auto text-4xl text-gray-400" />
+                    </div>
+                    <h3 className="text-lg font-medium text-gray-800 mb-2">
+                      Select a Theme to Explore Insights
+                    </h3>
+                    <p className="text-gray-600 max-w-md mx-auto">
+                      Choose a theme from the dropdown above to view related
+                      customer feedback and insights. Each insight includes the
+                      product area affected and the type of feedback received.
+                    </p>
+                  </div>
+                )}
+
+                {selectedFilterTheme && (
+                  <div className="bg-gray-50 rounded-lg p-6">
+                    <div className="mb-6">
+                      <h3 className="text-lg font-medium text-gray-800 mb-2">
+                        Insights for theme: {selectedFilterTheme}
+                      </h3>
+                      <div className="flex gap-4 text-sm text-gray-600">
+                        <div className="flex items-center">
+                          <div className="w-3 h-3 rounded-full bg-blue-100 mr-2"></div>
+                          <span>
+                            Product Area: The specific feature or section
+                            discussed
+                          </span>
+                        </div>
+                        <div className="flex items-center">
+                          <div className="w-3 h-3 rounded-full bg-green-100 mr-2"></div>
+                          <span>
+                            Feedback Type: Nature of the customer's input
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="grid gap-4">
+                      {filteredInsights.map((insight, index) => (
+                        <div
+                          key={index}
+                          className="bg-white p-6 rounded-lg shadow-sm border border-gray-100 hover:border-indigo-200 transition-colors"
+                        >
+                          <p className="text-gray-800 text-lg mb-4">
+                            {insight.insight}
+                          </p>
+                          <div className="flex gap-3 flex-wrap">
+                            <div className="flex items-center">
+                              <span className="text-sm font-medium text-gray-600 mr-2">
+                                Product Area:
+                              </span>
+                              <span className="text-sm px-3 py-1 bg-blue-100 text-blue-800 rounded-full">
+                                {insight.product_area}
+                              </span>
+                            </div>
+                            <div className="flex items-center">
+                              <span className="text-sm font-medium text-gray-600 mr-2">
+                                Feedback Type:
+                              </span>
+                              <span className="text-sm px-3 py-1 bg-green-100 text-green-800 rounded-full">
+                                {insight.feedback}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Add this after the Analytics Dashboard section */}
+          <div className="bg-white rounded-lg shadow p-6 mb-8">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h2 className="text-xl font-semibold">Insights Distribution</h2>
+                <p className="text-gray-600 mt-1">
+                  Frequency of each insight mentioned in customer feedback
+                </p>
+              </div>
               <div className="flex items-center gap-4">
                 <select
-                  value={selectedFilterTheme}
-                  onChange={(e) => fetchInsightsByTheme(e.target.value)}
-                  className="block w-64 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                  value={selectedDistributionTheme}
+                  onChange={(e) => setSelectedDistributionTheme(e.target.value)}
+                  className="block rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                 >
-                  <option value="">Select a theme</option>
+                  <option value="all">All Themes</option>
                   {allThemes.map((theme) => (
                     <option key={theme} value={theme}>
                       {theme}
@@ -1166,493 +1272,402 @@ ${JSON.stringify(insightData, null, 2)}
                   ))}
                 </select>
               </div>
+            </div>
 
-              {!selectedFilterTheme && (
-                <div className="bg-gray-50 rounded-lg p-8 text-center">
-                  <div className="mb-4">
-                    <FaChartBar className="mx-auto text-4xl text-gray-400" />
-                  </div>
-                  <h3 className="text-lg font-medium text-gray-800 mb-2">
-                    Select a Theme to Explore Insights
-                  </h3>
-                  <p className="text-gray-600 max-w-md mx-auto">
-                    Choose a theme from the dropdown above to view related
-                    customer feedback and insights. Each insight includes the
-                    product area affected and the type of feedback received.
-                  </p>
-                </div>
-              )}
+            <div className="h-full">
+              <div className="h-[300px]">
+                <Bar data={insightChartData} options={insightChartOptions} />
+              </div>
 
-              {selectedFilterTheme && (
-                <div className="bg-gray-50 rounded-lg p-6">
-                  <div className="mb-6">
-                    <h3 className="text-lg font-medium text-gray-800 mb-2">
-                      Insights for theme: {selectedFilterTheme}
-                    </h3>
-                    <div className="flex gap-4 text-sm text-gray-600">
-                      <div className="flex items-center">
-                        <div className="w-3 h-3 rounded-full bg-blue-100 mr-2"></div>
-                        <span>
-                          Product Area: The specific feature or section
-                          discussed
-                        </span>
-                      </div>
-                      <div className="flex items-center">
-                        <div className="w-3 h-3 rounded-full bg-green-100 mr-2"></div>
-                        <span>
-                          Feedback Type: Nature of the customer's input
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="grid gap-4">
-                    {filteredInsights.map((insight, index) => (
-                      <div
-                        key={index}
-                        className="bg-white p-6 rounded-lg shadow-sm border border-gray-100 hover:border-indigo-200 transition-colors"
-                      >
-                        <p className="text-gray-800 text-lg mb-4">
-                          {insight.insight}
-                        </p>
-                        <div className="flex gap-3 flex-wrap">
-                          <div className="flex items-center">
-                            <span className="text-sm font-medium text-gray-600 mr-2">
-                              Product Area:
-                            </span>
-                            <span className="text-sm px-3 py-1 bg-blue-100 text-blue-800 rounded-full">
-                              {insight.product_area}
-                            </span>
-                          </div>
-                          <div className="flex items-center">
-                            <span className="text-sm font-medium text-gray-600 mr-2">
-                              Feedback Type:
-                            </span>
-                            <span className="text-sm px-3 py-1 bg-green-100 text-green-800 rounded-full">
-                              {insight.feedback}
-                            </span>
-                          </div>
+              <div className="mt-6 border-t border-gray-100 pt-4">
+                <h3 className="text-sm font-medium text-gray-700 mb-3">
+                  Insight Reference
+                </h3>
+                <div className="space-y-2 max-h-[300px] overflow-y-auto pr-4">
+                  {insightChartData.originalLabels.map((label, index) => (
+                    <div
+                      key={index}
+                      className="flex items-start space-x-3 text-sm py-2 border-b border-gray-50 last:border-b-0"
+                    >
+                      <span className="font-medium text-gray-700 whitespace-nowrap min-w-[80px]">
+                        {generateShortLabel(label, index)}:
+                      </span>
+                      <div className="flex-1">
+                        <span className="text-gray-600">{label}</span>
+                        <div className="mt-1 flex items-center gap-2">
+                          <span
+                            className={`text-xs px-2 py-1 rounded-full ${
+                              insightDistribution[label].overallSentiment ===
+                              "Mostly Positive"
+                                ? "bg-green-100 text-green-800"
+                                : insightDistribution[label]
+                                    .overallSentiment === "Mostly Negative"
+                                ? "bg-red-100 text-red-800"
+                                : "bg-yellow-100 text-yellow-800"
+                            }`}
+                          >
+                            {insightDistribution[label].overallSentiment}
+                          </span>
+                          <span className="text-xs text-gray-500">
+                            Score:{" "}
+                            {insightDistribution[label].sentimentScore.toFixed(
+                              2
+                            )}
+                          </span>
+                          <span className="text-xs text-gray-500">
+                            ({insightDistribution[label].sentiments.POSITIVE} 👍
+                            {insightDistribution[label].sentiments.NEUTRAL} 😐
+                            {insightDistribution[label].sentiments.NEGATIVE} 👎)
+                          </span>
                         </div>
                       </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Add this after the Analytics Dashboard section */}
-        <div className="bg-white rounded-lg shadow p-6 mb-8">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h2 className="text-xl font-semibold">Insights Distribution</h2>
-              <p className="text-gray-600 mt-1">
-                Frequency of each insight mentioned in customer feedback
-              </p>
-            </div>
-            <div className="flex items-center gap-4">
-              <select
-                value={selectedDistributionTheme}
-                onChange={(e) => setSelectedDistributionTheme(e.target.value)}
-                className="block rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-              >
-                <option value="all">All Themes</option>
-                {allThemes.map((theme) => (
-                  <option key={theme} value={theme}>
-                    {theme}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          <div className="h-full">
-            <div className="h-[300px]">
-              <Bar data={insightChartData} options={insightChartOptions} />
-            </div>
-
-            <div className="mt-6 border-t border-gray-100 pt-4">
-              <h3 className="text-sm font-medium text-gray-700 mb-3">
-                Insight Reference
-              </h3>
-              <div className="space-y-2 max-h-[300px] overflow-y-auto pr-4">
-                {insightChartData.originalLabels.map((label, index) => (
-                  <div
-                    key={index}
-                    className="flex items-start space-x-3 text-sm py-2 border-b border-gray-50 last:border-b-0"
-                  >
-                    <span className="font-medium text-gray-700 whitespace-nowrap min-w-[80px]">
-                      {generateShortLabel(label, index)}:
-                    </span>
-                    <div className="flex-1">
-                      <span className="text-gray-600">{label}</span>
-                      <div className="mt-1 flex items-center gap-2">
-                        <span
-                          className={`text-xs px-2 py-1 rounded-full ${
-                            insightDistribution[label].overallSentiment ===
-                            "Mostly Positive"
-                              ? "bg-green-100 text-green-800"
-                              : insightDistribution[label].overallSentiment ===
-                                "Mostly Negative"
-                              ? "bg-red-100 text-red-800"
-                              : "bg-yellow-100 text-yellow-800"
-                          }`}
-                        >
-                          {insightDistribution[label].overallSentiment}
-                        </span>
-                        <span className="text-xs text-gray-500">
-                          Score:{" "}
-                          {insightDistribution[label].sentimentScore.toFixed(2)}
-                        </span>
-                        <span className="text-xs text-gray-500">
-                          ({insightDistribution[label].sentiments.POSITIVE} 👍
-                          {insightDistribution[label].sentiments.NEUTRAL} 😐
-                          {insightDistribution[label].sentiments.NEGATIVE} 👎)
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {selectedDistributionTheme !== "all" && (
-              <div className="mt-4 text-center text-sm text-gray-600">
-                Showing insights for theme: {selectedDistributionTheme}
-              </div>
-            )}
-          </div>
-        </div>
-
-        <div className="bg-white rounded-lg shadow p-6 mb-8">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h2 className="text-xl font-semibold">
-                AI-Powered Strategic Analysis
-              </h2>
-              <p className="text-gray-600 mt-1">
-                Comprehensive analysis of customer feedback patterns and
-                recommendations
-              </p>
-            </div>
-            <button
-              onClick={generateAIAnalysis}
-              disabled={
-                isAnalyzing || Object.keys(insightDistribution).length === 0
-              }
-              className={`px-4 py-2 rounded-lg flex items-center gap-2 ${
-                isAnalyzing || Object.keys(insightDistribution).length === 0
-                  ? "bg-gray-100 text-gray-500 cursor-not-allowed"
-                  : "bg-indigo-600 text-white hover:bg-indigo-700"
-              }`}
-            >
-              {isAnalyzing ? (
-                <>
-                  <FaSpinner className="animate-spin" />
-                  Analyzing...
-                </>
-              ) : (
-                <>
-                  <FaPlay className="text-sm" />
-                  Generate Analysis
-                </>
-              )}
-            </button>
-          </div>
-
-          {analysisError && (
-            <div className="bg-red-50 text-red-800 p-4 rounded-lg mb-4">
-              {analysisError}
-            </div>
-          )}
-
-          {!aiAnalysis && !isAnalyzing && (
-            <div className="text-center py-12">
-              <div className="bg-gray-50 rounded-lg p-8">
-                <FaChartBar className="mx-auto text-4xl text-gray-400 mb-4" />
-                <h3 className="text-lg font-medium text-gray-800 mb-2">
-                  Generate AI Analysis
-                </h3>
-                <p className="text-gray-600 max-w-md mx-auto">
-                  Click the button above to generate a comprehensive analysis of
-                  your customer feedback, including key patterns,
-                  recommendations, and action items.
-                </p>
-              </div>
-            </div>
-          )}
-
-          {aiAnalysis && (
-            <div className="prose prose-lg max-w-none">
-              <div
-                className="markdown-content space-y-6"
-                dangerouslySetInnerHTML={{ __html: aiAnalysis }}
-              />
-              <style jsx global>{`
-                .markdown-content h1 {
-                  color: #1a202c;
-                  font-size: 2.25rem;
-                  font-weight: 800;
-                  margin-bottom: 1.5rem;
-                  border-bottom: 2px solid #e2e8f0;
-                  padding-bottom: 0.5rem;
-                }
-                .markdown-content h2 {
-                  color: #2d3748;
-                  font-size: 1.5rem;
-                  font-weight: 700;
-                  margin-top: 2rem;
-                  margin-bottom: 1rem;
-                }
-                .markdown-content h3 {
-                  color: #4a5568;
-                  font-size: 1.25rem;
-                  font-weight: 600;
-                  margin-top: 1.5rem;
-                  margin-bottom: 0.75rem;
-                }
-                .markdown-content ul,
-                .markdown-content ol {
-                  margin-left: 1.5rem;
-                  margin-bottom: 1rem;
-                }
-                .markdown-content li {
-                  margin-bottom: 0.5rem;
-                }
-                .markdown-content strong {
-                  color: #2d3748;
-                  font-weight: 600;
-                }
-                .markdown-content blockquote {
-                  border-left: 4px solid #e2e8f0;
-                  padding-left: 1rem;
-                  margin: 1.5rem 0;
-                  color: #4a5568;
-                }
-                .markdown-content hr {
-                  margin: 2rem 0;
-                  border-color: #e2e8f0;
-                }
-              `}</style>
-            </div>
-          )}
-        </div>
-
-        {loading ? (
-          <div className="flex justify-center items-center">
-            <FaSpinner className="animate-spin text-3xl text-indigo-600" />
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {/* Meetings List - Left Panel */}
-            <div className="md:col-span-1 bg-white rounded-lg shadow p-6">
-              <h2 className="text-xl font-semibold mb-4">Meetings</h2>
-              {meetings.length === 0 ? (
-                <div className="text-center py-12">
-                  <FaFolder className="mx-auto text-4xl text-gray-400 mb-4" />
-                  <p className="text-gray-500">No meetings found</p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {meetings.map((meeting) => (
-                    <div
-                      key={meeting.name}
-                      className={`p-4 rounded-lg cursor-pointer transition-colors ${
-                        selectedMeeting === meeting.name
-                          ? "bg-indigo-50 border-2 border-indigo-500"
-                          : "bg-gray-50 hover:bg-gray-100"
-                      }`}
-                      onClick={() => fetchTranscript(meeting.name)}
-                    >
-                      <h3 className="font-medium text-gray-800">
-                        {meeting.name}
-                      </h3>
-                      <p className="text-sm text-gray-500">
-                        {new Date(meeting.created_at).toLocaleDateString()}
-                      </p>
                     </div>
                   ))}
                 </div>
-              )}
-            </div>
+              </div>
 
-            {/* Transcript and Clips Panel - Right Panel */}
-            <div className="md:col-span-2 bg-white rounded-lg shadow p-6">
-              {!selectedMeeting ? (
-                <div className="text-center py-12">
-                  <FaFolder className="mx-auto text-4xl text-gray-400 mb-4" />
-                  <p className="text-gray-500">
-                    Select a meeting to view transcript and clips
-                  </p>
-                </div>
-              ) : (
-                <div className="space-y-6">
-                  {/* Transcript Section */}
-                  <div>
-                    <h2 className="text-xl font-semibold mb-4">
-                      Transcript - {selectedMeeting}
-                    </h2>
-                    {loadingTranscript ? (
-                      <div className="flex justify-center py-8">
-                        <FaSpinner className="animate-spin text-3xl text-indigo-600" />
-                      </div>
-                    ) : transcript ? (
-                      <div className="bg-gray-50 rounded-lg p-4 max-h-[400px] overflow-y-auto">
-                        {transcript.segments?.map((segment, index) => (
-                          <div
-                            key={index}
-                            className={`mb-4 p-3 rounded shadow-sm ${
-                              index % 2 === 0 ? "bg-white" : "bg-gray-50"
-                            }`}
-                          >
-                            <div className="flex justify-between items-center mb-2">
-                              <span className="text-sm font-medium text-indigo-600">
-                                {segment.speaker}
-                              </span>
-                              <span className="text-xs text-gray-500">
-                                {new Date(segment.start * 1000)
-                                  .toISOString()
-                                  .substr(11, 8)}
-                                {" - "}
-                                {new Date(segment.end * 1000)
-                                  .toISOString()
-                                  .substr(11, 8)}
-                              </span>
-                            </div>
-                            <p className="text-gray-800 whitespace-pre-wrap">
-                              {segment.text}
-                            </p>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="text-center py-8">
-                        <p className="text-gray-500">No transcript available</p>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Clips Section */}
-                  <div>
-                    <h2 className="text-xl font-semibold mb-4">Clips</h2>
-                    {clips.length === 0 ? (
-                      <div className="text-center py-8">
-                        <p className="text-gray-500">No clips available</p>
-                      </div>
-                    ) : (
-                      <div className="grid gap-4">
-                        {clips.map((clip) => (
-                          <div
-                            key={clip.name}
-                            className="bg-gray-50 rounded-lg p-4"
-                          >
-                            <div className="space-y-4">
-                              <div>
-                                <h3 className="font-medium text-gray-800">
-                                  {clip.name}
-                                </h3>
-                                <p className="text-sm text-gray-500">
-                                  {(clip.metadata?.size / 1024 / 1024).toFixed(
-                                    2
-                                  )}{" "}
-                                  MB
-                                </p>
-                              </div>
-
-                              {clipUrls[clip.name] && (
-                                <div className="w-full">
-                                  {clip.metadata?.mimetype?.startsWith(
-                                    "video/"
-                                  ) ? (
-                                    <video
-                                      className="w-full rounded-lg"
-                                      controls
-                                      preload="metadata"
-                                      src={clipUrls[clip.name].url}
-                                    >
-                                      Your browser does not support the video
-                                      element.
-                                    </video>
-                                  ) : (
-                                    <audio
-                                      className="w-full"
-                                      controls
-                                      preload="metadata"
-                                      src={clipUrls[clip.name].url}
-                                    >
-                                      Your browser does not support the audio
-                                      element.
-                                    </audio>
-                                  )}
-                                </div>
-                              )}
-
-                              {clipFeedback[clip.name] && (
-                                <div className="mt-4 space-y-2 bg-white p-4 rounded-lg border border-gray-200">
-                                  <div className="flex items-center justify-between">
-                                    <span className="font-medium text-gray-700">
-                                      Sentiment:
-                                    </span>
-                                    <span
-                                      className={`px-3 py-1 rounded-full text-sm ${
-                                        clipFeedback[clip.name].sentiment ===
-                                        "positive"
-                                          ? "bg-green-100 text-green-800"
-                                          : clipFeedback[clip.name]
-                                              .sentiment === "negative"
-                                          ? "bg-red-100 text-red-800"
-                                          : "bg-yellow-100 text-yellow-800"
-                                      }`}
-                                    >
-                                      {clipFeedback[clip.name].sentiment}
-                                    </span>
-                                  </div>
-                                  <div>
-                                    <span className="font-medium text-gray-700">
-                                      Theme:
-                                    </span>
-                                    <p className="text-gray-600">
-                                      {clipFeedback[clip.name].theme}
-                                    </p>
-                                  </div>
-                                  <div>
-                                    <span className="font-medium text-gray-700">
-                                      Product Area:
-                                    </span>
-                                    <p className="text-gray-600">
-                                      {clipFeedback[clip.name].product_area}
-                                    </p>
-                                  </div>
-                                  <div>
-                                    <span className="font-medium text-gray-700">
-                                      Insight:
-                                    </span>
-                                    <p className="text-gray-600">
-                                      {clipFeedback[clip.name].insight}
-                                    </p>
-                                  </div>
-                                  <div>
-                                    <span className="font-medium text-gray-700">
-                                      Feedback:
-                                    </span>
-                                    <p className="text-gray-600">
-                                      {clipFeedback[clip.name].feedback}
-                                    </p>
-                                  </div>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
+              {selectedDistributionTheme !== "all" && (
+                <div className="mt-4 text-center text-sm text-gray-600">
+                  Showing insights for theme: {selectedDistributionTheme}
                 </div>
               )}
             </div>
           </div>
-        )}
-      </div>
+
+          <div className="bg-white rounded-lg shadow p-6 mb-8">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h2 className="text-xl font-semibold">
+                  AI-Powered Strategic Analysis
+                </h2>
+                <p className="text-gray-600 mt-1">
+                  Comprehensive analysis of customer feedback patterns and
+                  recommendations
+                </p>
+              </div>
+              <button
+                onClick={generateAIAnalysis}
+                disabled={
+                  isAnalyzing || Object.keys(insightDistribution).length === 0
+                }
+                className={`px-4 py-2 rounded-lg flex items-center gap-2 ${
+                  isAnalyzing || Object.keys(insightDistribution).length === 0
+                    ? "bg-gray-100 text-gray-500 cursor-not-allowed"
+                    : "bg-indigo-600 text-white hover:bg-indigo-700"
+                }`}
+              >
+                {isAnalyzing ? (
+                  <>
+                    <FaSpinner className="animate-spin" />
+                    Analyzing...
+                  </>
+                ) : (
+                  <>
+                    <FaPlay className="text-sm" />
+                    Generate Analysis
+                  </>
+                )}
+              </button>
+            </div>
+
+            {analysisError && (
+              <div className="bg-red-50 text-red-800 p-4 rounded-lg mb-4">
+                {analysisError}
+              </div>
+            )}
+
+            {!aiAnalysis && !isAnalyzing && (
+              <div className="text-center py-12">
+                <div className="bg-gray-50 rounded-lg p-8">
+                  <FaChartBar className="mx-auto text-4xl text-gray-400 mb-4" />
+                  <h3 className="text-lg font-medium text-gray-800 mb-2">
+                    Generate AI Analysis
+                  </h3>
+                  <p className="text-gray-600 max-w-md mx-auto">
+                    Click the button above to generate a comprehensive analysis
+                    of your customer feedback, including key patterns,
+                    recommendations, and action items.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {aiAnalysis && (
+              <div className="prose prose-lg max-w-none">
+                <div
+                  className="markdown-content space-y-6"
+                  dangerouslySetInnerHTML={{ __html: aiAnalysis }}
+                />
+                <style jsx global>{`
+                  .markdown-content h1 {
+                    color: #1a202c;
+                    font-size: 2.25rem;
+                    font-weight: 800;
+                    margin-bottom: 1.5rem;
+                    border-bottom: 2px solid #e2e8f0;
+                    padding-bottom: 0.5rem;
+                  }
+                  .markdown-content h2 {
+                    color: #2d3748;
+                    font-size: 1.5rem;
+                    font-weight: 700;
+                    margin-top: 2rem;
+                    margin-bottom: 1rem;
+                  }
+                  .markdown-content h3 {
+                    color: #4a5568;
+                    font-size: 1.25rem;
+                    font-weight: 600;
+                    margin-top: 1.5rem;
+                    margin-bottom: 0.75rem;
+                  }
+                  .markdown-content ul,
+                  .markdown-content ol {
+                    margin-left: 1.5rem;
+                    margin-bottom: 1rem;
+                  }
+                  .markdown-content li {
+                    margin-bottom: 0.5rem;
+                  }
+                  .markdown-content strong {
+                    color: #2d3748;
+                    font-weight: 600;
+                  }
+                  .markdown-content blockquote {
+                    border-left: 4px solid #e2e8f0;
+                    padding-left: 1rem;
+                    margin: 1.5rem 0;
+                    color: #4a5568;
+                  }
+                  .markdown-content hr {
+                    margin: 2rem 0;
+                    border-color: #e2e8f0;
+                  }
+                `}</style>
+              </div>
+            )}
+          </div>
+
+          {loading ? (
+            <div className="flex justify-center items-center">
+              <FaSpinner className="animate-spin text-3xl text-indigo-600" />
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {/* Meetings List - Left Panel */}
+              <div className="md:col-span-1 bg-white rounded-lg shadow p-6">
+                <h2 className="text-xl font-semibold mb-4">Meetings</h2>
+                {meetings.length === 0 ? (
+                  <div className="text-center py-12">
+                    <FaFolder className="mx-auto text-4xl text-gray-400 mb-4" />
+                    <p className="text-gray-500">No meetings found</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {meetings.map((meeting) => (
+                      <div
+                        key={meeting.name}
+                        className={`p-4 rounded-lg cursor-pointer transition-colors ${
+                          selectedMeeting === meeting.name
+                            ? "bg-indigo-50 border-2 border-indigo-500"
+                            : "bg-gray-50 hover:bg-gray-100"
+                        }`}
+                        onClick={() => fetchTranscript(meeting.name)}
+                      >
+                        <h3 className="font-medium text-gray-800">
+                          {meeting.name}
+                        </h3>
+                        <p className="text-sm text-gray-500">
+                          {new Date(meeting.created_at).toLocaleDateString()}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Transcript and Clips Panel - Right Panel */}
+              <div className="md:col-span-2 bg-white rounded-lg shadow p-6">
+                {!selectedMeeting ? (
+                  <div className="text-center py-12">
+                    <FaFolder className="mx-auto text-4xl text-gray-400 mb-4" />
+                    <p className="text-gray-500">
+                      Select a meeting to view transcript and clips
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-6">
+                    {/* Transcript Section */}
+                    <div>
+                      <h2 className="text-xl font-semibold mb-4">
+                        Transcript - {selectedMeeting}
+                      </h2>
+                      {loadingTranscript ? (
+                        <div className="flex justify-center py-8">
+                          <FaSpinner className="animate-spin text-3xl text-indigo-600" />
+                        </div>
+                      ) : transcript ? (
+                        <div className="bg-gray-50 rounded-lg p-4 max-h-[400px] overflow-y-auto">
+                          {transcript.segments?.map((segment, index) => (
+                            <div
+                              key={index}
+                              className={`mb-4 p-3 rounded shadow-sm ${
+                                index % 2 === 0 ? "bg-white" : "bg-gray-50"
+                              }`}
+                            >
+                              <div className="flex justify-between items-center mb-2">
+                                <span className="text-sm font-medium text-indigo-600">
+                                  {segment.speaker}
+                                </span>
+                                <span className="text-xs text-gray-500">
+                                  {new Date(segment.start * 1000)
+                                    .toISOString()
+                                    .substr(11, 8)}
+                                  {" - "}
+                                  {new Date(segment.end * 1000)
+                                    .toISOString()
+                                    .substr(11, 8)}
+                                </span>
+                              </div>
+                              <p className="text-gray-800 whitespace-pre-wrap">
+                                {segment.text}
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="text-center py-8">
+                          <p className="text-gray-500">
+                            No transcript available
+                          </p>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Clips Section */}
+                    <div>
+                      <h2 className="text-xl font-semibold mb-4">Clips</h2>
+                      {clips.length === 0 ? (
+                        <div className="text-center py-8">
+                          <p className="text-gray-500">No clips available</p>
+                        </div>
+                      ) : (
+                        <div className="grid gap-4">
+                          {clips.map((clip) => (
+                            <div
+                              key={clip.name}
+                              className="bg-gray-50 rounded-lg p-4"
+                            >
+                              <div className="space-y-4">
+                                <div>
+                                  <h3 className="font-medium text-gray-800">
+                                    {clip.name}
+                                  </h3>
+                                  <p className="text-sm text-gray-500">
+                                    {(
+                                      clip.metadata?.size /
+                                      1024 /
+                                      1024
+                                    ).toFixed(2)}{" "}
+                                    MB
+                                  </p>
+                                </div>
+
+                                {clipUrls[clip.name] && (
+                                  <div className="w-full">
+                                    {clip.metadata?.mimetype?.startsWith(
+                                      "video/"
+                                    ) ? (
+                                      <video
+                                        className="w-full rounded-lg"
+                                        controls
+                                        preload="metadata"
+                                        src={clipUrls[clip.name].url}
+                                      >
+                                        Your browser does not support the video
+                                        element.
+                                      </video>
+                                    ) : (
+                                      <audio
+                                        className="w-full"
+                                        controls
+                                        preload="metadata"
+                                        src={clipUrls[clip.name].url}
+                                      >
+                                        Your browser does not support the audio
+                                        element.
+                                      </audio>
+                                    )}
+                                  </div>
+                                )}
+
+                                {clipFeedback[clip.name] && (
+                                  <div className="mt-4 space-y-2 bg-white p-4 rounded-lg border border-gray-200">
+                                    <div className="flex items-center justify-between">
+                                      <span className="font-medium text-gray-700">
+                                        Sentiment:
+                                      </span>
+                                      <span
+                                        className={`px-3 py-1 rounded-full text-sm ${
+                                          clipFeedback[clip.name].sentiment ===
+                                          "positive"
+                                            ? "bg-green-100 text-green-800"
+                                            : clipFeedback[clip.name]
+                                                .sentiment === "negative"
+                                            ? "bg-red-100 text-red-800"
+                                            : "bg-yellow-100 text-yellow-800"
+                                        }`}
+                                      >
+                                        {clipFeedback[clip.name].sentiment}
+                                      </span>
+                                    </div>
+                                    <div>
+                                      <span className="font-medium text-gray-700">
+                                        Theme:
+                                      </span>
+                                      <p className="text-gray-600">
+                                        {clipFeedback[clip.name].theme}
+                                      </p>
+                                    </div>
+                                    <div>
+                                      <span className="font-medium text-gray-700">
+                                        Product Area:
+                                      </span>
+                                      <p className="text-gray-600">
+                                        {clipFeedback[clip.name].product_area}
+                                      </p>
+                                    </div>
+                                    <div>
+                                      <span className="font-medium text-gray-700">
+                                        Insight:
+                                      </span>
+                                      <p className="text-gray-600">
+                                        {clipFeedback[clip.name].insight}
+                                      </p>
+                                    </div>
+                                    <div>
+                                      <span className="font-medium text-gray-700">
+                                        Feedback:
+                                      </span>
+                                      <p className="text-gray-600">
+                                        {clipFeedback[clip.name].feedback}
+                                      </p>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      </main>
     </div>
   );
 };
