@@ -131,9 +131,9 @@ const Home = () => {
   const features = [
     {
       icon: <MdMeetingRoom size={24} />,
-      title: "Meeting Analysis",
+      title: "Meeting & Call Analysis",
       description:
-        "Upload meetings in any format - audio, text, or video. Our AI automatically captures and categorizes key moments across all your team discussions.",
+        "Upload meetings and customer calls in any format. Our AI automatically captures and categorizes key moments across all your conversations.",
     },
     {
       icon: <FaBrain size={24} />,
@@ -145,55 +145,55 @@ const Home = () => {
       icon: <FaChartLine size={24} />,
       title: "Analytics Dashboard",
       description:
-        "Comprehensive visual insights into priority topics, sentiment scores, and trending concerns across all meetings in your organization.",
+        "Comprehensive visual insights into priority topics, sentiment scores, and trending concerns across meetings and customer interactions.",
     },
     {
       icon: <FaRobot size={24} />,
-      title: "RAG Chatbot",
+      title: "AI Voice Assistant",
       description:
-        "Advanced AI chatbot that helps you quickly comprehend and query meeting contents, making information retrieval natural and efficient.",
+        "Proactive AI assistant that conducts customer calls, gathers feedback, and provides instant insights while maintaining natural conversations.",
     },
   ];
 
   const problemPoints = [
     {
       icon: <MdTimeline size={32} />,
-      title: "Time-Consuming Manual Tracking",
+      title: "Manual Feedback Collection",
       description:
-        "Managers struggle to keep track of discussions across multiple daily meetings happening simultaneously across teams.",
+        "Teams struggle to consistently gather and track feedback from both internal meetings and customer interactions.",
     },
     {
       icon: <MdCategory size={32} />,
       title: "Complex Classification",
       description:
-        "Manual classification of topics into ideas, bugs, complaints, and features becomes overwhelming with multiple meetings.",
+        "Manual classification of topics from various sources - meetings, customer calls, and feedback sessions becomes overwhelming.",
     },
     {
       icon: <FaTasks size={32} />,
       title: "Decision Paralysis",
       description:
-        "Complex decision-making process when planning future tasks and workflows based on meeting insights.",
+        "Complex decision-making process when analyzing feedback from multiple channels and planning future improvements.",
     },
   ];
 
   const solutions = [
     {
       icon: <FaLightbulb size={32} />,
-      title: "Idea Tracking",
+      title: "Automated Insights",
       description:
-        "Automatically capture and categorize innovative ideas across all meetings, making sure no valuable suggestion is lost.",
+        "AI-powered voice assistant proactively calls customers, while our system automatically captures and categorizes feedback from all sources.",
     },
     {
       icon: <FaBug size={32} />,
-      title: "Bug Management",
+      title: "Issue Management",
       description:
-        "Track reported bugs with sentiment scores and frequency across meetings, with built-in progress tracking.",
+        "Track reported issues and feature requests with sentiment scores across both meetings and customer calls, with built-in progress tracking.",
     },
     {
       icon: <FaComments size={32} />,
-      title: "Sentiment Analysis",
+      title: "Voice Analytics",
       description:
-        "Understand user sentiment towards features and identify critical concerns that need immediate attention.",
+        "Advanced voice analysis helps understand customer sentiment, identify patterns, and extract actionable insights from every conversation.",
     },
   ];
 
@@ -211,22 +211,16 @@ const Home = () => {
             variants={fadeInUpVariant}
             className="text-center"
           >
-            <h1 className="text-6xl font-bold mb-6 bg-clip-text text-transparent bg-gradient-to-r from-violet-400 to-indigo-600">
+            <h1 className="text-6xl font-bold mb-8 bg-clip-text text-transparent bg-gradient-to-r from-violet-400 to-indigo-600 leading-normal">
               InsightMatrix
             </h1>
             <p className="text-2xl text-gray-300 mb-8 max-w-3xl mx-auto leading-relaxed">
-              Transform your meeting insights into actionable intelligence.
-              Automate meeting analysis, track key discussions, and make
-              data-driven decisions.
+              Transform your meetings and customer calls into actionable
+              intelligence. Our AI voice assistant proactively gathers feedback
+              while our analytics engine turns conversations into strategic
+              insights.
             </p>
             <div className="flex justify-center gap-4">
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                className="bg-gradient-to-r from-violet-500 to-indigo-600 text-white px-10 py-4 rounded-full font-semibold hover:shadow-lg transition duration-300 text-lg"
-              >
-                Get Started
-              </motion.button>
               <Link to="/register">
                 <motion.button
                   whileHover={{ scale: 1.05 }}
@@ -240,7 +234,7 @@ const Home = () => {
                 <motion.button
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
-                  className="border-2 border-white text-white px-10 py-4 rounded-full font-semibold hover:shadow-lg transition duration-300 text-lg"
+                  className="border-2 border-white text-white bg-transparent px-10 py-4 rounded-full font-semibold hover:bg-white hover:text-indigo-600 transition-all duration-300 text-lg"
                 >
                   Login
                 </motion.button>
