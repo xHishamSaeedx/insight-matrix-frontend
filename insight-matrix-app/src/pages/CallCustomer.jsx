@@ -357,35 +357,51 @@ Please provide specific, actionable insights based on this data.
   };
 
   const fetchCalls = async () => {
+    if (!workspaceId) return;
+
     setIsLoadingCalls(true);
     setCallsError(null);
 
     try {
-      // First get all calls
+      // First get all calls for this workspace
       const { data: callsData, error: callsError } = await supabase
         .from("Calls")
         .select("*")
+        .eq("workspace_id", workspaceId)
         .order("created_at", { ascending: false });
 
       if (callsError) throw callsError;
 
+      if (!callsData || callsData.length === 0) {
+        setCalls({});
+        return;
+      }
+
       // Get all feedback insights referenced in calls
-      const feedbackInsightIds = callsData.map(
-        (call) => call.feedback_insight_id
-      );
+      const feedbackInsightIds = callsData
+        .map((call) => call.feedback_insight_id)
+        .filter(Boolean); // Filter out any null values
+
+      if (feedbackInsightIds.length === 0) {
+        setCalls({});
+        return;
+      }
 
       const { data: insightsData, error: insightsError } = await supabase
         .from("feedback_insights")
         .select("*")
-        .in("feedback_insights_id", feedbackInsightIds);
+        .in("feedback_insights_id", feedbackInsightIds)
+        .eq("workspace_id", workspaceId);
 
       if (insightsError) throw insightsError;
 
       // Group calls by vapi-call-id and include insights
       const groupedCalls = callsData.reduce((acc, call) => {
-        const insights = insightsData.filter(
-          (insight) => insight.feedback_insights_id === call.feedback_insight_id
-        );
+        const insights =
+          insightsData?.filter(
+            (insight) =>
+              insight?.feedback_insights_id === call.feedback_insight_id
+          ) || [];
 
         if (!acc[call["vapi-call-id"]]) {
           acc[call["vapi-call-id"]] = {
@@ -410,8 +426,10 @@ Please provide specific, actionable insights based on this data.
   };
 
   useEffect(() => {
-    fetchCalls();
-  }, []);
+    if (workspaceId) {
+      fetchCalls();
+    }
+  }, [workspaceId]);
 
   return (
     <div className="min-h-screen bg-gray-100">
