@@ -7,6 +7,7 @@ import {
   FaUsers,
   FaSpinner,
   FaPlay,
+  FaPhone,
 } from "react-icons/fa";
 import { supabase } from "../lib/supabase";
 import { Pie } from "react-chartjs-2";
@@ -406,6 +407,16 @@ ${JSON.stringify(insightData, null, 2)}
                   >
                     <FaChartBar className="text-lg" />
                     Analyze Meetings
+                  </motion.button>
+                </Link>
+                <Link to="/call-customer">
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    <FaPhone className="text-lg" />
+                    Call Customer
                   </motion.button>
                 </Link>
                 {isOwner && (

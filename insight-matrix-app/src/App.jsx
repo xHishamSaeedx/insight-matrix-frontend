@@ -7,6 +7,7 @@ import Dashboard from "./pages/Dashboard";
 import AddUser from "./pages/AddUser";
 import ViewUsers from "./pages/ViewUsers";
 import Analyze from "./pages/Analyze";
+import CallCustomer from "./pages/CallCustomer";
 import "./App.css";
 
 function App() {
@@ -23,6 +24,7 @@ function App() {
             <Route path="/add-user" element={<AddUser />} />
             <Route path="/view-users" element={<ViewUsers />} />
             <Route path="/analyze" element={<Analyze />} />
+            <Route path="/call-customer" element={<CallCustomer />} />
           </Routes>
         </main>
       </div>
