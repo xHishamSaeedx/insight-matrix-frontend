@@ -33,6 +33,8 @@ const Dashboard = () => {
   const [aiAnalysis, setAiAnalysis] = useState(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisError, setAnalysisError] = useState(null);
+  const [meetingsCount, setMeetingsCount] = useState(0);
+  const [callsCount, setCallsCount] = useState(0);
 
   useEffect(() => {
     const initializeDashboard = async () => {
@@ -42,7 +44,6 @@ const Dashboard = () => {
         } = await supabase.auth.getSession();
         if (!session) return;
 
-        // Get the user's data including owner status and company domain
         const { data: userData, error: userError } = await supabase
           .from("users")
           .select("owner, company_domain, workspace_id")
@@ -61,6 +62,9 @@ const Dashboard = () => {
 
         if (teamError) throw teamError;
         setTeamMembersCount(teamData.length);
+
+        // Fetch meetings and calls counts
+        await fetchCounts(userData.workspace_id);
 
         // Fetch theme distribution
         await fetchThemeDistribution(userData.workspace_id);
@@ -226,6 +230,34 @@ ${JSON.stringify(insightData, null, 2)}
       setAnalysisError("Failed to generate AI analysis. Please try again.");
     } finally {
       setIsAnalyzing(false);
+    }
+  };
+
+  const fetchCounts = async (wsId) => {
+    try {
+      // Get meetings count from storage bucket
+      const { data: storageData, error: storageError } = await supabase.storage
+        .from("transcripts")
+        .list(`${wsId}`);
+
+      if (storageError) throw storageError;
+      setMeetingsCount(storageData?.length || 0);
+
+      // Get unique calls count by selecting distinct vapi-call-ids
+      const { data: callsData, error: callsError } = await supabase
+        .from("Calls")
+        .select("vapi-call-id")
+        .eq("workspace_id", wsId);
+
+      if (callsError) throw callsError;
+
+      // Count unique vapi-call-ids
+      const uniqueCallIds = new Set(
+        callsData.map((call) => call["vapi-call-id"])
+      ).size;
+      setCallsCount(uniqueCallIds);
+    } catch (error) {
+      console.error("Error fetching counts:", error);
     }
   };
 
@@ -416,7 +448,7 @@ ${JSON.stringify(insightData, null, 2)}
                     className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
                   >
                     <FaPhone className="text-lg" />
-                    Call Customer
+                    Analyze Calls
                   </motion.button>
                 </Link>
                 {isOwner && (
@@ -447,20 +479,57 @@ ${JSON.stringify(insightData, null, 2)}
             )}
           </div>
 
-          {/* Team Members Card */}
-          <div className="bg-white rounded-lg shadow p-6 mb-8">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-gray-500">Team Members</p>
-                <h3 className="text-2xl font-bold text-gray-800">
-                  {loading ? (
-                    <div className="h-8 w-16 bg-gray-200 animate-pulse rounded"></div>
-                  ) : (
-                    teamMembersCount
-                  )}
-                </h3>
+          {/* Stats Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
+            {/* Team Members Card */}
+            <div className="bg-white rounded-lg shadow p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-gray-500">Team Members</p>
+                  <h3 className="text-2xl font-bold text-gray-800">
+                    {loading ? (
+                      <div className="h-8 w-16 bg-gray-200 animate-pulse rounded"></div>
+                    ) : (
+                      teamMembersCount
+                    )}
+                  </h3>
+                </div>
+                <FaUsers className="text-3xl text-indigo-600" />
               </div>
-              <FaUsers className="text-3xl text-indigo-600" />
+            </div>
+
+            {/* Meetings Card */}
+            <div className="bg-white rounded-lg shadow p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-gray-500">Total Meetings</p>
+                  <h3 className="text-2xl font-bold text-gray-800">
+                    {loading ? (
+                      <div className="h-8 w-16 bg-gray-200 animate-pulse rounded"></div>
+                    ) : (
+                      meetingsCount
+                    )}
+                  </h3>
+                </div>
+                <FaChartBar className="text-3xl text-green-600" />
+              </div>
+            </div>
+
+            {/* Calls Card */}
+            <div className="bg-white rounded-lg shadow p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-gray-500">Total Calls</p>
+                  <h3 className="text-2xl font-bold text-gray-800">
+                    {loading ? (
+                      <div className="h-8 w-16 bg-gray-200 animate-pulse rounded"></div>
+                    ) : (
+                      callsCount
+                    )}
+                  </h3>
+                </div>
+                <FaPhone className="text-3xl text-blue-600" />
+              </div>
             </div>
           </div>
 
