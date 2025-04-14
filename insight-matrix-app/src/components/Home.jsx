@@ -1,4 +1,4 @@
-import React, { Suspense, useMemo, useRef } from "react";
+import React, { Suspense, useMemo, useRef, useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Canvas, useFrame } from "@react-three/fiber";
 import {
@@ -27,6 +27,7 @@ import {
 import * as random from "maath/random/dist/maath-random.esm";
 import Navbar from "./Navbar";
 import { Link } from "react-router-dom";
+import { supabase } from "../lib/supabase";
 
 const StarBackground = (props) => {
   const ref = useRef();
@@ -128,6 +129,24 @@ const cardVariant = {
 };
 
 const Home = () => {
+  const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    // Get initial auth state
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+    });
+
+    // Listen for auth changes
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
   const features = [
     {
       icon: <MdMeetingRoom size={24} />,
@@ -221,24 +240,38 @@ const Home = () => {
               insights.
             </p>
             <div className="flex justify-center gap-4">
-              <Link to="/register">
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  className="bg-white text-indigo-600 px-10 py-4 rounded-full font-semibold hover:shadow-lg transition duration-300 text-lg"
-                >
-                  Register Company
-                </motion.button>
-              </Link>
-              <Link to="/login">
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  className="border-2 border-white text-white bg-transparent px-10 py-4 rounded-full font-semibold hover:bg-white hover:text-indigo-600 transition-all duration-300 text-lg"
-                >
-                  Login
-                </motion.button>
-              </Link>
+              {user ? (
+                <Link to="/dashboard">
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    className="bg-white text-indigo-600 px-10 py-4 rounded-full font-semibold hover:shadow-lg transition duration-300 text-lg"
+                  >
+                    Go to Dashboard
+                  </motion.button>
+                </Link>
+              ) : (
+                <>
+                  <Link to="/register">
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      className="bg-white text-indigo-600 px-10 py-4 rounded-full font-semibold hover:shadow-lg transition duration-300 text-lg"
+                    >
+                      Register Company
+                    </motion.button>
+                  </Link>
+                  <Link to="/login">
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      className="border-2 border-white text-white bg-transparent px-10 py-4 rounded-full font-semibold hover:bg-white hover:text-indigo-600 transition-all duration-300 text-lg"
+                    >
+                      Login
+                    </motion.button>
+                  </Link>
+                </>
+              )}
             </div>
           </motion.div>
         </section>
