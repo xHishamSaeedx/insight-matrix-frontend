@@ -61,6 +61,8 @@ const Analyze = () => {
   });
   const [isLoadingThemes, setIsLoadingThemes] = useState(true);
   const [isLoadingInsights, setIsLoadingInsights] = useState(true);
+  const [totalClips, setTotalClips] = useState(0);
+  const [totalInsights, setTotalInsights] = useState(0);
 
   useEffect(() => {
     const initializeData = async () => {
@@ -74,6 +76,8 @@ const Analyze = () => {
       fetchThemeDistribution();
       fetchAllThemes();
       fetchInsightDistribution();
+      fetchTotalClips();
+      fetchTotalInsights();
     }
   }, [workspaceId]);
 
@@ -1003,6 +1007,62 @@ ${JSON.stringify(insightData, null, 2)}
     }
   };
 
+  const fetchTotalClips = async () => {
+    try {
+      if (!workspaceId) return;
+
+      // Get all meeting folders
+      const { data: folders, error: foldersError } = await supabase.storage
+        .from("conversations")
+        .list(workspaceId.toString());
+
+      if (foldersError) throw foldersError;
+
+      let clipCount = 0;
+
+      // For each meeting folder, count the clips
+      for (const folder of folders || []) {
+        const { data: files, error: filesError } = await supabase.storage
+          .from("conversations")
+          .list(`${workspaceId}/${folder.name}`);
+
+        if (filesError) throw filesError;
+
+        // Count only audio/video files
+        const meetingClips =
+          files?.filter(
+            (item) =>
+              item.metadata?.mimetype?.startsWith("audio/") ||
+              item.metadata?.mimetype?.startsWith("video/")
+          ) || [];
+
+        clipCount += meetingClips.length;
+      }
+
+      setTotalClips(clipCount);
+    } catch (error) {
+      console.error("Error fetching total clips:", error);
+    }
+  };
+
+  const fetchTotalInsights = async () => {
+    try {
+      if (!workspaceId) return;
+
+      const { count, error } = await supabase
+        .from("feedback_insights")
+        .select("feedback_insights_id", { count: "exact" })
+        .eq("workspace_id", workspaceId)
+        .eq("source", "meeting");
+
+      if (error) throw error;
+
+      setTotalInsights(count || 0);
+    } catch (error) {
+      console.error("Error fetching total insights:", error);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-100">
       {/* Main content wrapper - pushes content below navbar */}
@@ -1128,7 +1188,11 @@ ${JSON.stringify(insightData, null, 2)}
                     Total Meetings
                   </h3>
                   <p className="text-3xl font-bold text-indigo-600">
-                    {meetings.length}
+                    {loading ? (
+                      <span className="animate-pulse">...</span>
+                    ) : (
+                      meetings.length
+                    )}
                   </p>
                 </div>
                 <div className="bg-green-50 p-6 rounded-lg">
@@ -1136,7 +1200,11 @@ ${JSON.stringify(insightData, null, 2)}
                     Total Clips
                   </h3>
                   <p className="text-3xl font-bold text-green-600">
-                    {clips.length}
+                    {loading ? (
+                      <span className="animate-pulse">...</span>
+                    ) : (
+                      totalClips
+                    )}
                   </p>
                 </div>
                 <div className="bg-purple-50 p-6 rounded-lg">
@@ -1144,7 +1212,11 @@ ${JSON.stringify(insightData, null, 2)}
                     Insights Generated
                   </h3>
                   <p className="text-3xl font-bold text-purple-600">
-                    {Object.keys(clipFeedback).length}
+                    {loading ? (
+                      <span className="animate-pulse">...</span>
+                    ) : (
+                      totalInsights
+                    )}
                   </p>
                 </div>
               </div>
