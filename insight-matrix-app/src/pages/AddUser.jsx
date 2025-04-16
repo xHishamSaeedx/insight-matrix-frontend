@@ -1,7 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabase";
-import { motion } from "framer-motion";
 import { FaUserPlus } from "react-icons/fa";
 
 const AddUser = () => {
@@ -14,6 +13,22 @@ const AddUser = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
+  const [currentUser, setCurrentUser] = useState(null);
+
+  useEffect(() => {
+    const getUser = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) {
+        navigate("/login");
+        return;
+      }
+      setCurrentUser(user);
+    };
+
+    getUser();
+  }, [navigate]);
 
   const handleChange = (e) => {
     setFormData({
@@ -28,23 +43,19 @@ const AddUser = () => {
     setError(null);
 
     try {
-      // Extract domain from email
-      const domain = formData.email.split("@")[1];
+      if (!currentUser) {
+        throw new Error("You must be logged in to add users");
+      }
 
-      // Get workspace_id from companies table using domain
-      const { data: companyData, error: companyError } = await supabase
-        .from("companies")
+      const { data: userData, error: userError } = await supabase
+        .from("users")
         .select("workspace_id")
-        .eq("company_domain", domain)
+        .eq("user_id", currentUser.id)
         .single();
 
-      if (companyError)
-        throw new Error(
-          "Company domain not found. Please check the email domain."
-        );
-      if (!companyData) throw new Error("No company found for this domain.");
+      if (userError) throw new Error("Failed to get workspace information");
+      if (!userData) throw new Error("No workspace found for your account");
 
-      // Create user in Supabase Auth
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
@@ -57,18 +68,16 @@ const AddUser = () => {
 
       if (authError) throw authError;
 
-      // Create user in users table
-      const { error: userError } = await supabase.from("users").insert([
+      const { error: newUserError } = await supabase.from("users").insert([
         {
           user_id: authData.user.id,
-          company_domain: domain,
-          workspace_id: companyData.workspace_id,
+          workspace_id: userData.workspace_id,
           owner: false,
           email: formData.email,
         },
       ]);
 
-      if (userError) throw userError;
+      if (newUserError) throw newUserError;
 
       setSuccess(true);
       setFormData({ email: "", password: "", fullName: "" });
@@ -80,6 +89,10 @@ const AddUser = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleCancel = () => {
+    navigate("/dashboard");
   };
 
   return (
@@ -170,15 +183,23 @@ const AddUser = () => {
               </div>
             )}
 
-            <motion.button
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              type="submit"
-              disabled={loading}
-              className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
-            >
-              {loading ? "Creating..." : "Create User"}
-            </motion.button>
+            <div className="flex space-x-4">
+              <button
+                type="submit"
+                disabled={loading}
+                className="flex-1 py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
+              >
+                {loading ? "Creating..." : "Create User"}
+              </button>
+
+              <button
+                type="button"
+                onClick={handleCancel}
+                className="flex-1 py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+              >
+                Cancel
+              </button>
+            </div>
           </form>
         </div>
       </div>

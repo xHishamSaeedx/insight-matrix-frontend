@@ -6,12 +6,13 @@ const ViewUsers = () => {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [companyDomain, setCompanyDomain] = useState(null);
+  const [workspaceId, setWorkspaceId] = useState(null);
+  const [workspaceName, setWorkspaceName] = useState("Your Workspace");
 
   useEffect(() => {
     const fetchUsers = async () => {
       try {
-        // Get current user's company domain
+        // Get current user's workspace ID
         const {
           data: { session },
         } = await supabase.auth.getSession();
@@ -19,21 +20,38 @@ const ViewUsers = () => {
 
         const { data: userData, error: userError } = await supabase
           .from("users")
-          .select("company_domain")
+          .select("workspace_id")
           .eq("user_id", session.user.id)
           .single();
 
         if (userError) throw userError;
-        setCompanyDomain(userData.company_domain);
+        setWorkspaceId(userData.workspace_id);
 
-        // Fetch all users from the same company domain
-        const { data: companyUsers, error: usersError } = await supabase
+        // Fetch all users from the same workspace
+        const { data: workspaceUsers, error: usersError } = await supabase
           .from("users")
           .select("*")
-          .eq("company_domain", userData.company_domain);
+          .eq("workspace_id", userData.workspace_id);
 
         if (usersError) throw usersError;
-        setUsers(companyUsers);
+        setUsers(workspaceUsers);
+
+        // Optionally fetch workspace name if you have a workspaces table
+        // This is just a placeholder - adjust according to your schema
+        try {
+          const { data: workspaceData } = await supabase
+            .from("workspaces")
+            .select("name")
+            .eq("id", userData.workspace_id)
+            .single();
+
+          if (workspaceData) {
+            setWorkspaceName(workspaceData.name);
+          }
+        } catch (err) {
+          // Silently fail if workspace name can't be fetched
+          console.log("Could not fetch workspace name:", err);
+        }
       } catch (err) {
         setError(err.message);
       } finally {
@@ -72,13 +90,11 @@ const ViewUsers = () => {
         <div className="text-center mb-8">
           <FaUsers className="mx-auto h-12 w-12 text-indigo-600" />
           <h2 className="mt-6 text-3xl font-extrabold text-gray-900">
-            Company Users
+            Workspace Users
           </h2>
-          {companyDomain && (
-            <p className="mt-2 text-sm text-gray-600">
-              Users for domain: {companyDomain}
-            </p>
-          )}
+          <p className="mt-2 text-sm text-gray-600">
+            Users in workspace: {workspaceName}
+          </p>
         </div>
 
         <div className="mt-8 flex flex-col">

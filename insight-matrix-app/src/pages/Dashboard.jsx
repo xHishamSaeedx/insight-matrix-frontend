@@ -46,19 +46,22 @@ const Dashboard = () => {
 
         const { data: userData, error: userError } = await supabase
           .from("users")
-          .select("owner, company_domain, workspace_id")
+          .select("owner, workspace_id")
           .eq("user_id", session.user.id)
           .single();
 
         if (userError) throw userError;
-        setIsOwner(userData.owner);
+
+        // Make sure we're properly setting the owner status
+        console.log("User owner status:", userData.owner);
+        setIsOwner(userData.owner === true);
         setWorkspaceId(userData.workspace_id);
 
-        // Get total team members count for the company
+        // Get total team members count for the workspace
         const { data: teamData, error: teamError } = await supabase
           .from("users")
           .select("user_id")
-          .eq("company_domain", userData.company_domain);
+          .eq("workspace_id", userData.workspace_id);
 
         if (teamError) throw teamError;
         setTeamMembersCount(teamData.length);
@@ -451,6 +454,10 @@ ${JSON.stringify(insightData, null, 2)}
                     Analyze Calls
                   </motion.button>
                 </Link>
+
+                {/* Add a console log to debug */}
+                {console.log("Is owner:", isOwner)}
+
                 {isOwner && (
                   <>
                     <Link to="/add-user">
