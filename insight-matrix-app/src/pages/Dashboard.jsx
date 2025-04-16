@@ -90,6 +90,7 @@ const Dashboard = () => {
   const fetchThemeDistribution = async (wsId) => {
     setIsLoadingThemes(true);
     try {
+      // Fetch all feedback insights for the workspace, regardless of source
       const { data, error } = await supabase
         .from("feedback_insights")
         .select("theme")
@@ -265,32 +266,12 @@ ${JSON.stringify(insightData, null, 2)}
   };
 
   const chartData = {
-    labels: [
-      "ideas",
-      "problems",
-      "complaints",
-      "appreciations",
-      "questions",
-      "compete mentions",
-      "pricing mentions",
-      "customer support",
-      "customer education",
-      "needs triage",
-    ],
+    labels: allThemes.filter((theme) => themeDistribution[theme] > 0),
     datasets: [
       {
-        data: [
-          themeDistribution["ideas"] || 0,
-          themeDistribution["problems"] || 0,
-          themeDistribution["complaints"] || 0,
-          themeDistribution["appreciations"] || 0,
-          themeDistribution["questions"] || 0,
-          themeDistribution["compete mentions"] || 0,
-          themeDistribution["pricing mentions"] || 0,
-          themeDistribution["customer support"] || 0,
-          themeDistribution["customer education"] || 0,
-          themeDistribution["needs triage"] || 0,
-        ],
+        data: allThemes
+          .filter((theme) => themeDistribution[theme] > 0)
+          .map((theme) => themeDistribution[theme]),
         backgroundColor: [
           "#FF6384",
           "#36A2EB",
@@ -302,7 +283,13 @@ ${JSON.stringify(insightData, null, 2)}
           "#36A2EB",
           "#FFCE56",
           "#4BC0C0",
-        ],
+          // Add more colors if needed
+        ].slice(
+          0,
+          Object.keys(themeDistribution).filter(
+            (key) => themeDistribution[key] > 0
+          ).length
+        ),
         borderColor: "#ffffff",
         borderWidth: 2,
       },
@@ -334,6 +321,26 @@ ${JSON.stringify(insightData, null, 2)}
           },
           color: "#333",
           cursor: "pointer",
+          generateLabels: (chart) => {
+            const datasets = chart.data.datasets;
+            return chart.data.labels.map((label, i) => {
+              const meta = chart.getDatasetMeta(0);
+              const style = meta.controller.getStyle(i);
+
+              const value = datasets[0].data[i];
+              const total = datasets[0].data.reduce((acc, val) => acc + val, 0);
+              const percentage = ((value / total) * 100).toFixed(1);
+
+              return {
+                text: `${label} (${percentage}%)`,
+                fillStyle: style.backgroundColor,
+                strokeStyle: style.borderColor,
+                lineWidth: style.borderWidth,
+                hidden: isNaN(datasets[0].data[i]) || meta.data[i].hidden,
+                index: i,
+              };
+            });
+          },
         },
       },
       tooltip: {
