@@ -458,7 +458,7 @@ ${JSON.stringify(insightData, null, 2)}
                     className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
                   >
                     <FaPhone className="text-lg" />
-                    Analyze Calls
+                    Analyze Customer Calls
                   </motion.button>
                 </Link>
 
@@ -533,7 +533,7 @@ ${JSON.stringify(insightData, null, 2)}
             <div className="bg-white rounded-lg shadow p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-gray-500">Total Calls</p>
+                  <p className="text-gray-500">Total Customer Calls</p>
                   <h3 className="text-2xl font-bold text-gray-800">
                     {loading ? (
                       <div className="h-8 w-16 bg-gray-200 animate-pulse rounded"></div>
