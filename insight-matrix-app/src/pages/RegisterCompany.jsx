@@ -9,6 +9,7 @@ export default function RegisterCompany() {
   // Combined registration state
   const [formData, setFormData] = useState({
     companyName: "",
+    teamName: "",
     companyEmail: "",
     password: "",
   });
@@ -47,7 +48,11 @@ export default function RegisterCompany() {
       const { data: companyData, error: companyError } = await supabase
         .from("companies")
         .insert([
-          { company_name: formData.companyName, company_domain: domain },
+          {
+            company_name: formData.companyName,
+            team_name: formData.teamName,
+            company_domain: domain,
+          },
         ])
         .select();
 
@@ -98,7 +103,7 @@ export default function RegisterCompany() {
                 htmlFor="companyName"
                 className="block text-sm font-medium text-gray-700"
               >
-                Team Name
+                Company Name
               </label>
               <div className="mt-1">
                 <input
@@ -107,6 +112,27 @@ export default function RegisterCompany() {
                   type="text"
                   required
                   value={formData.companyName}
+                  onChange={handleInputChange}
+                  className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Your Company Name"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label
+                htmlFor="teamName"
+                className="block text-sm font-medium text-gray-700"
+              >
+                Team Name
+              </label>
+              <div className="mt-1">
+                <input
+                  id="teamName"
+                  name="teamName"
+                  type="text"
+                  required
+                  value={formData.teamName}
                   onChange={handleInputChange}
                   className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                   placeholder="Your Team Name"
@@ -119,7 +145,7 @@ export default function RegisterCompany() {
                 htmlFor="companyEmail"
                 className="block text-sm font-medium text-gray-700"
               >
-                Team Email
+                Company Email
               </label>
               <div className="mt-1">
                 <input
@@ -130,10 +156,10 @@ export default function RegisterCompany() {
                   value={formData.companyEmail}
                   onChange={handleInputChange}
                   className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="you@team.com"
+                  placeholder="you@company.com"
                 />
                 <p className="mt-1 text-sm text-gray-500">
-                  This email will be used for your owner account
+                  This email will be used for your company owner account
                 </p>
               </div>
             </div>
