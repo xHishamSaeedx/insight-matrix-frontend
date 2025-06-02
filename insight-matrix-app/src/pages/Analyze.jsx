@@ -63,6 +63,10 @@ const Analyze = () => {
   const [isLoadingInsights, setIsLoadingInsights] = useState(true);
   const [totalClips, setTotalClips] = useState(0);
   const [totalInsights, setTotalInsights] = useState(0);
+  const [showChat, setShowChat] = useState(false);
+  const [chatMessages, setChatMessages] = useState([]);
+  const [userQuestion, setUserQuestion] = useState("");
+  const [isProcessingQuestion, setIsProcessingQuestion] = useState(false);
 
   useEffect(() => {
     const initializeData = async () => {
@@ -163,6 +167,9 @@ const Analyze = () => {
     try {
       setLoadingTranscript(true);
       setSelectedMeeting(meetingTitle);
+      // Clear chat history when switching transcripts
+      setChatMessages([]);
+      setShowChat(false);
       console.log(
         "Fetching transcript for:",
         `${workspaceId}/${meetingTitle}/transcript.json`
@@ -1063,6 +1070,73 @@ ${JSON.stringify(insightData, null, 2)}
     }
   };
 
+  // Add new function to process transcript for chat
+  const processTranscriptForChat = async () => {
+    try {
+      if (!transcript) return;
+
+      // Combine all transcript segments into one text
+      const fullText = transcript.segments
+        .map((segment) => segment.text)
+        .join(" ");
+
+      const response = await fetch("http://localhost:8000/process-text", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          text: fullText,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to process transcript");
+      }
+
+      setShowChat(true);
+    } catch (error) {
+      console.error("Error processing transcript for chat:", error);
+    }
+  };
+
+  // Add new function to handle asking questions
+  const handleAskQuestion = async (e) => {
+    e.preventDefault();
+    if (!userQuestion.trim()) return;
+
+    setIsProcessingQuestion(true);
+    try {
+      const response = await fetch("http://localhost:8000/ask-question", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          question: userQuestion,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to get answer");
+      }
+
+      const data = await response.json();
+
+      setChatMessages((prev) => [
+        ...prev,
+        { type: "user", content: userQuestion },
+        { type: "assistant", content: data.reply },
+      ]);
+
+      setUserQuestion("");
+    } catch (error) {
+      console.error("Error asking question:", error);
+    } finally {
+      setIsProcessingQuestion(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-100">
       {/* Main content wrapper - pushes content below navbar */}
@@ -1586,6 +1660,17 @@ ${JSON.stringify(insightData, null, 2)}
                         </div>
                       ) : transcript ? (
                         <div className="bg-gray-50 rounded-lg p-4 max-h-[400px] overflow-y-auto">
+                          <div className="flex justify-between items-center mb-4">
+                            <h3 className="text-lg font-medium text-gray-800">
+                              Transcript
+                            </h3>
+                            <button
+                              onClick={processTranscriptForChat}
+                              className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+                            >
+                              Chat with Transcript
+                            </button>
+                          </div>
                           {transcript.segments?.map((segment, index) => (
                             <div
                               key={index}
@@ -1621,6 +1706,88 @@ ${JSON.stringify(insightData, null, 2)}
                         </div>
                       )}
                     </div>
+
+                    {/* Update Chat Interface */}
+                    {showChat && (
+                      <div className="mt-6 bg-white rounded-lg shadow-lg border border-gray-200">
+                        <div className="flex justify-between items-center p-4 border-b border-gray-200 bg-gray-50 rounded-t-lg">
+                          <h3 className="text-lg font-medium text-gray-800">
+                            Chat with Transcript
+                          </h3>
+                          <button
+                            onClick={() => setShowChat(false)}
+                            className="text-gray-500 hover:text-gray-700 transition-colors"
+                          >
+                            Close
+                          </button>
+                        </div>
+
+                        <div className="h-[300px] overflow-y-auto p-4 space-y-4 bg-gray-50">
+                          {chatMessages.length === 0 ? (
+                            <div className="flex items-center justify-center h-full">
+                              <p className="text-gray-500 text-center">
+                                Ask questions about the transcript to get
+                                started
+                              </p>
+                            </div>
+                          ) : (
+                            chatMessages.map((message, index) => (
+                              <div
+                                key={index}
+                                className={`flex ${
+                                  message.type === "user"
+                                    ? "justify-end"
+                                    : "justify-start"
+                                }`}
+                              >
+                                <div
+                                  className={`max-w-[80%] p-3 rounded-lg ${
+                                    message.type === "user"
+                                      ? "bg-indigo-600 text-white"
+                                      : "bg-white border border-gray-200 text-gray-800"
+                                  }`}
+                                >
+                                  <p className="text-sm">{message.content}</p>
+                                </div>
+                              </div>
+                            ))
+                          )}
+                        </div>
+
+                        <form
+                          onSubmit={handleAskQuestion}
+                          className="p-4 border-t border-gray-200 bg-white rounded-b-lg"
+                        >
+                          <div className="flex gap-2">
+                            <input
+                              type="text"
+                              value={userQuestion}
+                              onChange={(e) => setUserQuestion(e.target.value)}
+                              placeholder="Ask a question about the transcript..."
+                              className="flex-1 rounded-lg border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 shadow-sm"
+                              disabled={isProcessingQuestion}
+                            />
+                            <button
+                              type="submit"
+                              disabled={
+                                isProcessingQuestion || !userQuestion.trim()
+                              }
+                              className={`px-4 py-2 rounded-lg transition-colors ${
+                                isProcessingQuestion || !userQuestion.trim()
+                                  ? "bg-gray-300 cursor-not-allowed"
+                                  : "bg-indigo-600 hover:bg-indigo-700 text-white"
+                              }`}
+                            >
+                              {isProcessingQuestion ? (
+                                <FaSpinner className="animate-spin" />
+                              ) : (
+                                "Send"
+                              )}
+                            </button>
+                          </div>
+                        </form>
+                      </div>
+                    )}
 
                     {/* Clips Section */}
                     <div>

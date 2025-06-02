@@ -83,10 +83,25 @@ const Navbar = () => {
 
   const handleSignOut = async () => {
     try {
+      // Clear local state first
+      setUser(null);
+
+      // Clear storage
+      localStorage.clear();
+      sessionStorage.clear();
+
+      // Attempt to sign out from Supabase
       await supabase.auth.signOut();
-      navigate("/");
+
+      // Navigate to home page
+      navigate("/", { replace: true });
     } catch (error) {
       console.error("Error signing out:", error);
+      // Even if there's an error, ensure we're logged out locally
+      setUser(null);
+      localStorage.clear();
+      sessionStorage.clear();
+      navigate("/", { replace: true });
     }
   };
 
