@@ -548,14 +548,6 @@ ${themeData.length > 0 ? "" : "*(No theme data available)*"}
 2. 
 3. 
 
-## Detailed Analysis
-
-### Theme Distribution Analysis
-${JSON.stringify(themeData, null, 2)}
-
-### Customer Sentiment Patterns
-${JSON.stringify(insightData, null, 2)}
-
 ---
 *Analysis generated based on ${insightData.length} insights across ${
         themeData.length

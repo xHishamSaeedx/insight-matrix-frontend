@@ -174,43 +174,36 @@ const CallCustomer = () => {
         })
       );
 
-      const prompt = `As a customer call analyst, provide a comprehensive analysis of our customer calls data. Here's the data structure:
+      const prompt = `As a customer call analyst, analyze this data and provide strategic insights. Format your response using this markdown structure:
 
 # Customer Call Analysis Summary
 
-## Top Themes Overview
-${insightData
-  .map(({ theme, count }) => `- ${theme}: ${count} mentions`)
-  .join("\n")}
+## Top 3 Significant Themes
+${insightData.length > 0 ? "" : "*(No theme data available)*"}
 
-## Key Patterns and Trends
-- **Most Discussed Topics**: Analyze the most frequent themes
-- **Customer Sentiment**: Analyze overall sentiment across calls
-- **Urgent Areas**: Identify themes that need immediate attention
-- **Positive Feedback**: Highlight areas receiving positive feedback
+## Overall Sentiment Analysis
+- **Positive Trends**: 
+- **Areas of Concern**: 
+- **Neutral Patterns**: 
 
-## Product Area Impact
-${Array.from(new Set(allInsights.map((i) => i.product_area)))
-  .map((area) => `- **${area}**: Impact analysis`)
-  .join("\n")}
+## Key Recommendations
+### Immediate Action Items
+1. 
+2. 
+3. 
 
-## Strategic Recommendations
-1. Immediate Actions
-2. Medium-term Improvements
-3. Long-term Strategic Changes
+### Strategic Opportunities
+1. 
+2. 
+3. 
 
-## Customer Experience Insights
-- **Pain Points**: Common frustrations or challenges
-- **Success Stories**: Areas where customers express satisfaction
-- **Feature Requests**: Common requests or suggestions
-
-## Detailed Theme Analysis
-${JSON.stringify(insightData, null, 2)}
-
-Please provide specific, actionable insights based on this data.
+### Areas to Maintain
+1. 
+2. 
+3. 
 
 ---
-*Analysis generated from ${allInsights.length} customer call insights across ${
+*Analysis generated based on ${allInsights.length} insights across ${
         insightData.length
       } themes*`;
 
@@ -282,6 +275,33 @@ Please provide specific, actionable insights based on this data.
     plugins: {
       legend: {
         position: "right",
+        labels: {
+          padding: 20,
+          font: {
+            size: 12,
+          },
+          color: "#333",
+          generateLabels: (chart) => {
+            const datasets = chart.data.datasets;
+            return chart.data.labels.map((label, i) => {
+              const meta = chart.getDatasetMeta(0);
+              const style = meta.controller.getStyle(i);
+
+              const value = datasets[0].data[i];
+              const total = datasets[0].data.reduce((acc, val) => acc + val, 0);
+              const percentage = ((value / total) * 100).toFixed(1);
+
+              return {
+                text: `${label} (${percentage}%)`,
+                fillStyle: style.backgroundColor,
+                strokeStyle: style.borderColor,
+                lineWidth: style.borderWidth,
+                hidden: isNaN(datasets[0].data[i]) || meta.data[i].hidden,
+                index: i,
+              };
+            });
+          },
+        },
       },
       tooltip: {
         callbacks: {
@@ -600,156 +620,159 @@ Please provide specific, actionable insights based on this data.
               </div>
             )}
 
-            {isLoadingCalls ? (
-              <div className="flex items-center justify-center py-12">
-                <FaSpinner className="animate-spin text-3xl text-indigo-600" />
-                <span className="ml-2 text-gray-600">Loading calls...</span>
-              </div>
-            ) : Object.keys(calls).length === 0 ? (
-              <div className="text-center py-12 bg-gray-50 rounded-lg">
-                <p className="text-gray-500">No calls found</p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {selectedCall ? (
-                  <>
-                    <button
-                      onClick={() => setSelectedCall(null)}
-                      className="mb-4 text-sm text-indigo-600 hover:text-indigo-800 flex items-center gap-2"
-                    >
-                      <FaArrowLeft /> Back to all calls
-                    </button>
-                    <div className="border border-gray-200 rounded-lg overflow-hidden">
-                      <div className="bg-gray-50 p-4 border-b border-gray-200">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <h3 className="text-lg font-medium text-gray-900">
-                              Call from{" "}
-                              {new Date(
-                                selectedCall.created_at
-                              ).toLocaleString()}
-                            </h3>
-                            <p className="text-sm text-gray-500 mt-1">
-                              Duration: {Math.floor(selectedCall.duration / 60)}
-                              m {selectedCall.duration % 60}s
+            <div className="h-[600px] overflow-hidden">
+              {isLoadingCalls ? (
+                <div className="flex items-center justify-center h-full">
+                  <FaSpinner className="animate-spin text-3xl text-indigo-600" />
+                  <span className="ml-2 text-gray-600">Loading calls...</span>
+                </div>
+              ) : Object.keys(calls).length === 0 ? (
+                <div className="flex items-center justify-center h-full">
+                  <p className="text-gray-500">No calls found</p>
+                </div>
+              ) : (
+                <div className="h-full overflow-y-auto pr-2">
+                  {selectedCall ? (
+                    <div className="space-y-4">
+                      <button
+                        onClick={() => setSelectedCall(null)}
+                        className="text-sm text-indigo-600 hover:text-indigo-800 flex items-center gap-2"
+                      >
+                        <FaArrowLeft /> Back to all calls
+                      </button>
+                      <div className="border border-gray-200 rounded-lg overflow-hidden">
+                        <div className="bg-gray-50 p-4 border-b border-gray-200">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <h3 className="text-lg font-medium text-gray-900">
+                                Call from{" "}
+                                {new Date(
+                                  selectedCall.created_at
+                                ).toLocaleString()}
+                              </h3>
+                              <p className="text-sm text-gray-500 mt-1">
+                                Duration:{" "}
+                                {Math.floor(selectedCall.duration / 60)}m{" "}
+                                {selectedCall.duration % 60}s
+                              </p>
+                            </div>
+                            {selectedCall.recording_url && (
+                              <a
+                                href={selectedCall.recording_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="px-4 py-2 text-sm font-medium text-blue-600 bg-blue-50 rounded-md hover:bg-blue-100"
+                              >
+                                Listen to Recording
+                              </a>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="p-4">
+                          <div className="mb-4">
+                            <h4 className="text-sm font-medium text-gray-700 mb-2">
+                              Summary
+                            </h4>
+                            <p className="text-gray-600">
+                              {selectedCall.summary}
                             </p>
                           </div>
-                          {selectedCall.recording_url && (
-                            <a
-                              href={selectedCall.recording_url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="px-4 py-2 text-sm font-medium text-blue-600 bg-blue-50 rounded-md hover:bg-blue-100"
-                            >
-                              Listen to Recording
-                            </a>
+
+                          <div className="mb-4">
+                            <h4 className="text-sm font-medium text-gray-700 mb-2">
+                              Transcript
+                            </h4>
+                            <div className="bg-gray-50 p-4 rounded-md">
+                              <pre className="text-sm text-gray-600 whitespace-pre-wrap font-mono">
+                                {selectedCall.transcript}
+                              </pre>
+                            </div>
+                          </div>
+
+                          {selectedCall.insights.length > 0 && (
+                            <div>
+                              <h4 className="text-sm font-medium text-gray-700 mb-2">
+                                Insights ({selectedCall.insights.length})
+                              </h4>
+                              <div className="grid gap-4">
+                                {selectedCall.insights.map((insight, index) => (
+                                  <div
+                                    key={index}
+                                    className="bg-white p-4 rounded-lg border border-gray-100"
+                                  >
+                                    <div className="flex gap-2 mb-2">
+                                      <span className="px-2 py-1 text-xs font-medium bg-purple-100 text-purple-800 rounded-full">
+                                        {insight.theme}
+                                      </span>
+                                      <span className="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full">
+                                        {insight.product_area}
+                                      </span>
+                                    </div>
+                                    <p className="text-gray-800 mb-2">
+                                      {insight.insight}
+                                    </p>
+                                    {insight.feature_recommendation && (
+                                      <p className="text-sm text-gray-600 mt-2">
+                                        <strong>Recommendation:</strong>{" "}
+                                        {insight.feature_recommendation}
+                                      </p>
+                                    )}
+                                    <div className="mt-2">
+                                      <span className="px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full">
+                                        {insight.feedback}
+                                      </span>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {selectedCall.allCalls.length > 1 && (
+                            <div className="mt-4 pt-4 border-t border-gray-200">
+                              <p className="text-sm text-gray-500">
+                                This call generated{" "}
+                                {selectedCall.allCalls.length} separate insights
+                              </p>
+                            </div>
                           )}
                         </div>
                       </div>
-
-                      <div className="p-4">
-                        <div className="mb-4">
-                          <h4 className="text-sm font-medium text-gray-700 mb-2">
-                            Summary
-                          </h4>
-                          <p className="text-gray-600">
-                            {selectedCall.summary}
-                          </p>
-                        </div>
-
-                        <div className="mb-4">
-                          <h4 className="text-sm font-medium text-gray-700 mb-2">
-                            Transcript
-                          </h4>
-                          <div className="bg-gray-50 p-4 rounded-md">
-                            <pre className="text-sm text-gray-600 whitespace-pre-wrap font-mono">
-                              {selectedCall.transcript}
-                            </pre>
-                          </div>
-                        </div>
-
-                        {selectedCall.insights.length > 0 && (
-                          <div>
-                            <h4 className="text-sm font-medium text-gray-700 mb-2">
-                              Insights ({selectedCall.insights.length})
-                            </h4>
-                            <div className="grid gap-4">
-                              {selectedCall.insights.map((insight, index) => (
-                                <div
-                                  key={index}
-                                  className="bg-white p-4 rounded-lg border border-gray-100"
-                                >
-                                  <div className="flex gap-2 mb-2">
-                                    <span className="px-2 py-1 text-xs font-medium bg-purple-100 text-purple-800 rounded-full">
-                                      {insight.theme}
-                                    </span>
-                                    <span className="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full">
-                                      {insight.product_area}
-                                    </span>
-                                  </div>
-                                  <p className="text-gray-800 mb-2">
-                                    {insight.insight}
-                                  </p>
-                                  {insight.feature_recommendation && (
-                                    <p className="text-sm text-gray-600 mt-2">
-                                      <strong>Recommendation:</strong>{" "}
-                                      {insight.feature_recommendation}
-                                    </p>
-                                  )}
-                                  <div className="mt-2">
-                                    <span className="px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full">
-                                      {insight.feedback}
-                                    </span>
-                                  </div>
-                                </div>
-                              ))}
+                    </div>
+                  ) : (
+                    <div className="grid gap-4">
+                      {Object.entries(calls).map(([vapiCallId, callData]) => (
+                        <div
+                          key={vapiCallId}
+                          onClick={() => setSelectedCall(callData)}
+                          className="border border-gray-200 rounded-lg p-4 hover:border-indigo-300 hover:bg-indigo-50 cursor-pointer transition-colors"
+                        >
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <h3 className="text-lg font-medium text-gray-900">
+                                Call from{" "}
+                                {new Date(callData.created_at).toLocaleString()}
+                              </h3>
+                              <p className="text-sm text-gray-500 mt-1">
+                                Duration: {Math.floor(callData.duration / 60)}m{" "}
+                                {callData.duration % 60}s
+                              </p>
+                              <p className="text-sm text-gray-500 mt-1">
+                                {callData.insights.length} insights generated
+                              </p>
+                            </div>
+                            <div className="text-indigo-600">
+                              <FaChevronRight />
                             </div>
                           </div>
-                        )}
-
-                        {selectedCall.allCalls.length > 1 && (
-                          <div className="mt-4 pt-4 border-t border-gray-200">
-                            <p className="text-sm text-gray-500">
-                              This call generated {selectedCall.allCalls.length}{" "}
-                              separate insights
-                            </p>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </>
-                ) : (
-                  <div className="grid gap-4">
-                    {Object.entries(calls).map(([vapiCallId, callData]) => (
-                      <div
-                        key={vapiCallId}
-                        onClick={() => setSelectedCall(callData)}
-                        className="border border-gray-200 rounded-lg p-4 hover:border-indigo-300 hover:bg-indigo-50 cursor-pointer transition-colors"
-                      >
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <h3 className="text-lg font-medium text-gray-900">
-                              Call from{" "}
-                              {new Date(callData.created_at).toLocaleString()}
-                            </h3>
-                            <p className="text-sm text-gray-500 mt-1">
-                              Duration: {Math.floor(callData.duration / 60)}m{" "}
-                              {callData.duration % 60}s
-                            </p>
-                            <p className="text-sm text-gray-500 mt-1">
-                              {callData.insights.length} insights generated
-                            </p>
-                          </div>
-                          <div className="text-indigo-600">
-                            <FaChevronRight />
-                          </div>
                         </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Theme Distribution Chart */}
@@ -816,10 +839,134 @@ Please provide specific, actionable insights based on this data.
                 )}
               </button>
             </div>
+
             {Object.keys(themeDistribution).length === 0 && (
               <div className="bg-yellow-50 text-yellow-800 p-4 rounded-lg">
                 No call data available. Please ensure there are analyzed calls
                 before generating analysis.
+              </div>
+            )}
+
+            {/* Analysis Results */}
+            {aiAnalysis && (
+              <div className="mt-6 border-t border-gray-200 pt-6">
+                <div className="flex items-center justify-between mb-6">
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900">
+                      Analysis Results
+                    </h3>
+                    <p className="text-gray-600 mt-1">
+                      AI-generated analysis of customer call patterns and
+                      insights
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setAiAnalysis(null)}
+                    className="text-gray-500 hover:text-gray-700"
+                  >
+                    Clear Analysis
+                  </button>
+                </div>
+
+                {analysisError && (
+                  <div className="bg-red-50 text-red-800 p-4 rounded-lg mb-4">
+                    {analysisError}
+                  </div>
+                )}
+
+                <div
+                  className="prose prose-lg max-w-none"
+                  dangerouslySetInnerHTML={{ __html: aiAnalysis }}
+                />
+                <style jsx global>{`
+                  .prose {
+                    color: #374151;
+                  }
+                  .prose h1 {
+                    color: #111827;
+                    font-size: 2rem;
+                    font-weight: 700;
+                    margin-top: 0;
+                    margin-bottom: 1.5rem;
+                    border-bottom: 2px solid #e5e7eb;
+                    padding-bottom: 0.75rem;
+                  }
+                  .prose h2 {
+                    color: #1f2937;
+                    font-size: 1.5rem;
+                    font-weight: 600;
+                    margin-top: 2rem;
+                    margin-bottom: 1rem;
+                  }
+                  .prose h3 {
+                    color: #374151;
+                    font-size: 1.25rem;
+                    font-weight: 600;
+                    margin-top: 1.5rem;
+                    margin-bottom: 0.75rem;
+                  }
+                  .prose p {
+                    margin-top: 1.25rem;
+                    margin-bottom: 1.25rem;
+                    line-height: 1.75;
+                  }
+                  .prose ul,
+                  .prose ol {
+                    margin-top: 1.25rem;
+                    margin-bottom: 1.25rem;
+                    padding-left: 1.625rem;
+                  }
+                  .prose li {
+                    margin-top: 0.5rem;
+                    margin-bottom: 0.5rem;
+                  }
+                  .prose li > p {
+                    margin-top: 0.75rem;
+                    margin-bottom: 0.75rem;
+                  }
+                  .prose strong {
+                    color: #111827;
+                    font-weight: 600;
+                  }
+                  .prose blockquote {
+                    border-left: 4px solid #e5e7eb;
+                    padding-left: 1rem;
+                    margin: 1.5rem 0;
+                    color: #4b5563;
+                    font-style: italic;
+                  }
+                  .prose hr {
+                    margin: 2rem 0;
+                    border-color: #e5e7eb;
+                  }
+                  .prose a {
+                    color: #2563eb;
+                    text-decoration: underline;
+                    font-weight: 500;
+                  }
+                  .prose a:hover {
+                    color: #1d4ed8;
+                  }
+                  .prose code {
+                    color: #111827;
+                    background-color: #f3f4f6;
+                    padding: 0.2rem 0.4rem;
+                    border-radius: 0.25rem;
+                    font-size: 0.875rem;
+                  }
+                  .prose pre {
+                    background-color: #f3f4f6;
+                    padding: 1rem;
+                    border-radius: 0.5rem;
+                    overflow-x: auto;
+                  }
+                  .prose pre code {
+                    background-color: transparent;
+                    padding: 0;
+                    border-radius: 0;
+                    font-size: 0.875rem;
+                  }
+                `}</style>
               </div>
             )}
           </div>
@@ -872,80 +1019,6 @@ Please provide specific, actionable insights based on this data.
               )}
             </div>
           </div>
-
-          {/* AI Analysis Results */}
-          {aiAnalysis && (
-            <div className="bg-white rounded-lg shadow p-6">
-              <div className="flex items-center justify-between mb-6">
-                <div>
-                  <h2 className="text-xl font-semibold">
-                    AI-Powered Strategic Analysis
-                  </h2>
-                  <p className="text-gray-600 mt-1">
-                    Comprehensive analysis of customer call patterns and
-                    recommendations
-                  </p>
-                </div>
-              </div>
-
-              {analysisError && (
-                <div className="bg-red-50 text-red-800 p-4 rounded-lg mb-4">
-                  {analysisError}
-                </div>
-              )}
-
-              <div
-                className="prose prose-lg max-w-none"
-                dangerouslySetInnerHTML={{ __html: aiAnalysis }}
-              />
-              <style jsx global>{`
-                .markdown-content h1 {
-                  color: #1a202c;
-                  font-size: 2.25rem;
-                  font-weight: 800;
-                  margin-bottom: 1.5rem;
-                  border-bottom: 2px solid #e2e8f0;
-                  padding-bottom: 0.5rem;
-                }
-                .markdown-content h2 {
-                  color: #2d3748;
-                  font-size: 1.5rem;
-                  font-weight: 700;
-                  margin-top: 2rem;
-                  margin-bottom: 1rem;
-                }
-                .markdown-content h3 {
-                  color: #4a5568;
-                  font-size: 1.25rem;
-                  font-weight: 600;
-                  margin-top: 1.5rem;
-                  margin-bottom: 0.75rem;
-                }
-                .markdown-content ul,
-                .markdown-content ol {
-                  margin-left: 1.5rem;
-                  margin-bottom: 1rem;
-                }
-                .markdown-content li {
-                  margin-bottom: 0.5rem;
-                }
-                .markdown-content strong {
-                  color: #2d3748;
-                  font-weight: 600;
-                }
-                .markdown-content blockquote {
-                  border-left: 4px solid #e2e8f0;
-                  padding-left: 1rem;
-                  margin: 1.5rem 0;
-                  color: #4a5568;
-                }
-                .markdown-content hr {
-                  margin: 2rem 0;
-                  border-color: #e2e8f0;
-                }
-              `}</style>
-            </div>
-          )}
         </div>
       </main>
     </div>
